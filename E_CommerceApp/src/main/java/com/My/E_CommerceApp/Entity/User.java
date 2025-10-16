@@ -1,5 +1,6 @@
 package com.My.E_CommerceApp.Entity;
 
+import com.My.E_CommerceApp.Enum.AccountStatus;
 import com.My.E_CommerceApp.Enum.Role;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -30,13 +31,40 @@ public class User extends Base{
     private String phone;
 
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    private String password;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    private String profileImage;
+    private String gender;
+    private String bio;
+
+    // Vendor info
+    private String shopName;
+    private String shopDescription;
+    private String shopLogo;
+
+    //Vendor rating
+    private Double averageRating = 0.0;
+
 
     // A user can have multiple addresses
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Address> addresses = new ArrayList<>();
+
+    @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Product> products = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Order> orders = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    private AccountStatus accountStatus = AccountStatus.ACTIVE;
+
 }

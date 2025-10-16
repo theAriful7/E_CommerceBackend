@@ -1,144 +1,129 @@
 package com.My.E_CommerceApp.Service;
 
-import com.My.E_CommerceApp.DTO.RequestDTO.LoginRequestDTO;
-import com.My.E_CommerceApp.DTO.RequestDTO.RegisterRequestDTO;
+import com.My.E_CommerceApp.DTO.RequestDTO.LoginRequestDTO;;
 import com.My.E_CommerceApp.DTO.RequestDTO.UserRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.UserResponseDTO;
 import com.My.E_CommerceApp.Entity.User;
 import com.My.E_CommerceApp.Enum.Role;
 import com.My.E_CommerceApp.Repository.UserRepo;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepo userRepo;
 
-    // 🧱 Static Users (Demo Mode)
-    private final List<UserResponseDTO> staticUsers = new ArrayList<>();
+    // -------------------- 🔹 Mapper Methods -------------------- //
 
-    public UserService(UserRepo userRepo) {
-        this.userRepo = userRepo;
-
-        // 🟢 Predefined demo users (password: 1234)
-        UserResponseDTO admin = new UserResponseDTO();
-        admin.setId(1L);
-        admin.setFullName("Admin User");
-        admin.setEmail("admin@gmail.com");
-        admin.setRole(Role.ADMIN);
-
-        UserResponseDTO vendor = new UserResponseDTO();
-        vendor.setId(2L);
-        vendor.setFullName("Vendor User");
-        vendor.setEmail("vendor@gmail.com");
-        vendor.setRole(Role.VENDOR);
-
-        UserResponseDTO customer = new UserResponseDTO();
-        customer.setId(3L);
-        customer.setFullName("Customer User");
-        customer.setEmail("customer@gmail.com");
-        customer.setRole(Role.CUSTOMER);
-
-        staticUsers.add(admin);
-        staticUsers.add(vendor);
-        staticUsers.add(customer);
+    private UserResponseDTO toDto(User user) {
+        UserResponseDTO dto = new UserResponseDTO();
+        dto.setId(user.getId());
+        dto.setFullName(user.getFullName());
+        dto.setEmail(user.getEmail());
+        dto.setPhone(user.getPhone());
+        dto.setRole(user.getRole());
+        dto.setIsActive(user.getIsActive());
+        dto.setProfileImage(user.getProfileImage());
+        dto.setGender(user.getGender());
+        dto.setBio(user.getBio());
+        dto.setShopName(user.getShopName());
+        dto.setShopDescription(user.getShopDescription());
+        dto.setShopLogo(user.getShopLogo());
+        dto.setAverageRating(user.getAverageRating());
+        return dto;
     }
 
-    // ------------------ EXISTING CRUD ------------------ //
-
-    public User toEntity(UserRequestDTO dto) {
+    private User toEntity(UserRequestDTO dto) {
         User user = new User();
         user.setFullName(dto.getFullName());
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
-        user.setPasswordHash(dto.getPassword());
-        user.setRole(dto.getRole());
+        user.setPassword(dto.getPassword());
+        user.setRole(Role.CUSTOMER); // ✅ Default role is CUSTOMER
+        user.setIsActive(true);
         return user;
     }
 
-    public UserResponseDTO toDto(User user) {
-        UserResponseDTO res = new UserResponseDTO();
-        res.setId(user.getId());
-        res.setFullName(user.getFullName());
-        res.setEmail(user.getEmail());
-        res.setPhone(user.getPhone());
-        res.setRole(user.getRole());
-        res.setIsActive(user.getIsActive());
-        return res;
-    }
+    // -------------------- 🔹 Register -------------------- //
 
-    public UserResponseDTO createUser(UserRequestDTO dto) {
+    public UserResponseDTO register(UserRequestDTO dto) {
+        boolean emailExists = userRepo.findAll().stream()
+                .anyMatch(u -> u.getEmail().equalsIgnoreCase(dto.getEmail()));
+        if (emailExists) throw new RuntimeException("Email already registered!");
+
         User saved = userRepo.save(toEntity(dto));
         return toDto(saved);
     }
 
-    public UserResponseDTO getUserById(Long id) {
-        return userRepo.findById(id)
+    // -------------------- 🔹 Login -------------------- //
+
+    public Optional<UserResponseDTO> login(LoginRequestDTO dto) {
+        return userRepo.findAll().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(dto.getEmail()))
+                .filter(u -> u.getPassword().equals(dto.getPassword())) // ⚠️ plain text check
                 .map(this::toDto)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .findFirst();
     }
 
+    // -------------------- 🔹 CRUD -------------------- //
+
     public List<UserResponseDTO> getAllUsers() {
-        return userRepo.findAll().stream()
+        return userRepo.findAll()
+                .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
+    public UserResponseDTO getUserById(Long id) {
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        return toDto(user);
+    }
+
     public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
-        User existing = userRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        existing.setFullName(dto.getFullName());
-        existing.setEmail(dto.getEmail());
-        existing.setPhone(dto.getPhone());
-        existing.setPasswordHash(dto.getPassword());
-        existing.setRole(dto.getRole());
-        User updated = userRepo.save(existing);
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (dto.getFullName() != null) user.setFullName(dto.getFullName());
+        if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+        if (dto.getPhone() != null) user.setPhone(dto.getPhone());
+        if (dto.getPassword() != null) user.setPassword(dto.getPassword());
+
+        User updated = userRepo.save(user);
         return toDto(updated);
     }
 
-    public String deleteUser(Long id) {
-        User existing = userRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        existing.setIsActive(false);
-        userRepo.save(existing);
+    public String deactivateUser(Long id) {
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        user.setIsActive(false);
+        userRepo.save(user);
         return "User deactivated successfully";
     }
 
-    // ------------------ NEW LOGIN & REGISTER ------------------ //
+    // -------------------- 🔹 Role Management -------------------- //
 
-    public Optional<UserResponseDTO> login(LoginRequestDTO dto) {
-        // ✅ 1️⃣ Check Static Demo Users
-        Optional<UserResponseDTO> staticMatch = staticUsers.stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(dto.getEmail())
-                        && dto.getPassword().equals("1234"))
-                .findFirst();
-
-        if (staticMatch.isPresent()) return staticMatch;
-
-        // ✅ 2️⃣ Check Database Users
-        return userRepo.findAll().stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(dto.getEmail())
-                        && dto.getPassword().equals(u.getPasswordHash()))
-                .map(this::toDto)
-                .findFirst();
-    }
-
-    public UserResponseDTO register(RegisterRequestDTO dto) {
-        // 🟢 All new users = CUSTOMER
-        User user = new User();
-        user.setFullName(dto.getFullName());
-        user.setEmail(dto.getEmail());
-        user.setPhone(dto.getPhone());
-        user.setPasswordHash(dto.getPassword());
-        user.setRole(Role.CUSTOMER);
-
+    public UserResponseDTO promoteToVendor(Long id) {
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        user.setRole(Role.VENDOR);
         User saved = userRepo.save(user);
         return toDto(saved);
     }
 
+    public UserResponseDTO promoteToAdmin(Long id) {
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        user.setRole(Role.ADMIN);
+        User saved = userRepo.save(user);
+        return toDto(saved);
+    }
 }

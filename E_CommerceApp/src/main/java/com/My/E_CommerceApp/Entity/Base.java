@@ -25,17 +25,21 @@ public class Base implements Serializable {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
-    // private String createdBy;
+    @Column(name = "created_by")
+    private String createdBy;
 
-    // private String updatedBy;
+    @Column(name = "updated_by")
+    private String updatedBy;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        // this.createdBy = SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        // this.updatedBy = SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }
