@@ -19,7 +19,7 @@ import java.util.List;
 public class Cart extends Base{
 
     @OneToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -27,4 +27,32 @@ public class Cart extends Base{
 
     @Column(name = "total_price", nullable = false)
     private Double totalPrice = 0.0;
+
+
+    public void addItem(CartItem item) {
+        items.add(item);
+        item.setCart(this);
+        recalculateTotal();
+    }
+
+
+    public void removeItem(CartItem item) {
+        items.remove(item);
+        item.setCart(null);
+        recalculateTotal();
+    }
+
+
+    public void recalculateTotal() {
+        this.totalPrice = items.stream()
+                .mapToDouble(CartItem::getTotalPrice)
+                .sum();
+    }
+
+
+    public int getTotalItems() {
+        return items.stream()
+                .mapToInt(CartItem::getQuantity)
+                .sum();
+    }
 }

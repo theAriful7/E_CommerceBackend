@@ -4,6 +4,8 @@ import com.My.E_CommerceApp.DTO.RequestDTO.CategoryRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.CategoryResponseDTO;
 import com.My.E_CommerceApp.Service.AddressService;
 import com.My.E_CommerceApp.Service.CategoryService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,36 +13,42 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categories")
 @CrossOrigin(origins = "http://localhost:4200")
+@RequiredArgsConstructor
 public class CategoryController {
+
 
     private final CategoryService categoryService;
 
-    public CategoryController(CategoryService categoryService) {
-        this.categoryService = categoryService;
-    }
 
-    // ✅ Create new category
     @PostMapping
-    public CategoryResponseDTO createCategory(@RequestBody CategoryRequestDTO dto) {
-        return categoryService.save(dto);
+    public ResponseEntity<CategoryResponseDTO> createCategory(@RequestBody CategoryRequestDTO dto) {
+        return ResponseEntity.ok(categoryService.createCategory(dto));
     }
 
-    // ✅ Get category by ID
-    @GetMapping("/{id}")
-    public CategoryResponseDTO getCategoryById(@PathVariable Long id) {
-        return categoryService.findById(id);
-    }
 
-    // ✅ Get all categories
     @GetMapping
-    public List<CategoryResponseDTO> getAllCategories() {
-        return categoryService.findAll();
+    public ResponseEntity<List<CategoryResponseDTO>> getAllCategories() {
+        return ResponseEntity.ok(categoryService.getAllCategories());
     }
 
-    // ✅ Delete category
+
+    @GetMapping("/{id}")
+    public ResponseEntity<CategoryResponseDTO> getCategoryById(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.getCategoryById(id));
+    }
+
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CategoryResponseDTO> updateCategory(
+            @PathVariable Long id,
+            @RequestBody CategoryRequestDTO dto
+    ) {
+        return ResponseEntity.ok(categoryService.updateCategory(id, dto));
+    }
+
+
     @DeleteMapping("/{id}")
-    public String deleteCategory(@PathVariable Long id) {
-        categoryService.delete(id);
-        return "Category deleted successfully!";
+    public ResponseEntity<String> deleteCategory(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.deleteCategory(id));
     }
 }

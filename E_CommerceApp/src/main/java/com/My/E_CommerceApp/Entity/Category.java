@@ -1,9 +1,7 @@
 package com.My.E_CommerceApp.Entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,11 +18,14 @@ import java.util.List;
 @Table(name = "categories")
 public class Category extends Base{
 
-    @Column(nullable = false, unique = true)
-    private String name; // যেমন: Electronics, Fashion, Grocery
 
+    @Column(nullable = false, unique = true, length = 100)
+    private String name;
+
+    @Column(length = 500)
     private String description;
 
-    @OneToMany(mappedBy = "category")
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Product> products = new ArrayList<>();
 }

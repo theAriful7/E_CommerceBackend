@@ -5,30 +5,21 @@ import com.My.E_CommerceApp.DTO.ResponseDTO.CategoryResponseDTO;
 import com.My.E_CommerceApp.Entity.Category;
 import com.My.E_CommerceApp.Repository.AddressRepo;
 import com.My.E_CommerceApp.Repository.CategoryRepo;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CategoryService {
 
     private final CategoryRepo categoryRepo;
 
-    public CategoryService(CategoryRepo categoryRepo) {
-        this.categoryRepo = categoryRepo;
-    }
 
-    // RequestDTO → Entity
-    public Category toEntity(CategoryRequestDTO dto) {
-        Category c = new Category();
-        c.setName(dto.getName());
-        c.setDescription(dto.getDescription());
-        return c;
-    }
-
-    // Entity → ResponseDTO
-    public CategoryResponseDTO toDto(Category category) {
+    private CategoryResponseDTO toDto(Category category) {
         CategoryResponseDTO dto = new CategoryResponseDTO();
         dto.setId(category.getId());
         dto.setName(category.getName());
@@ -36,30 +27,56 @@ public class CategoryService {
         return dto;
     }
 
-    // ✅ Create / Save category
-    public CategoryResponseDTO save(CategoryRequestDTO dto) {
-        Category category = toEntity(dto);
-        Category saved = categoryRepo.save(category);
+
+    private Category toEntity(CategoryRequestDTO dto) {
+        Category category = new Category();
+        category.setName(dto.getName());
+        category.setDescription(dto.getDescription());
+        return category;
+    }
+
+
+    public CategoryResponseDTO createCategory(CategoryRequestDTO dto) {
+        boolean exists = categoryRepo.findAll().stream()
+                .anyMatch(c -> c.getName().equalsIgnoreCase(dto.getName()));
+        if (exists) throw new RuntimeException("Category name already exists!");
+
+        Category saved = categoryRepo.save(toEntity(dto));
         return toDto(saved);
     }
 
-    // ✅ Find category by ID
-    public CategoryResponseDTO findById(Long id) {
-        return categoryRepo.findById(id)
-                .map(this::toDto)
-                .orElse(null);
-    }
 
-    // ✅ Get all categories
-    public List<CategoryResponseDTO> findAll() {
+    public List<CategoryResponseDTO> getAllCategories() {
         return categoryRepo.findAll()
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
-    // ✅ Delete category
-    public void delete(Long id) {
-        categoryRepo.deleteById(id);
+
+    public CategoryResponseDTO getCategoryById(Long id) {
+        Category category = categoryRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+        return toDto(category);
+    }
+
+
+    public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO dto) {
+        Category existing = categoryRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+
+        if (dto.getName() != null) existing.setName(dto.getName());
+        if (dto.getDescription() != null) existing.setDescription(dto.getDescription());
+
+        Category updated = categoryRepo.save(existing);
+        return toDto(updated);
+    }
+
+
+    public String deleteCategory(Long id) {
+        Category category = categoryRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+        categoryRepo.delete(category);
+        return "Category deleted successfully!";
     }
 }

@@ -4,6 +4,7 @@ import com.My.E_CommerceApp.DTO.RequestDTO.CartItemRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.CartItemResponseDTO;
 import com.My.E_CommerceApp.Service.AddressService;
 import com.My.E_CommerceApp.Service.CartItemService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,28 +20,23 @@ public class CartItemController {
         this.cartItemService = cartItemService;
     }
 
-    // ✅ Create CartItem
     @PostMapping
-    public CartItemResponseDTO createCartItem(@RequestBody CartItemRequestDTO dto) {
-        return cartItemService.save(dto);
+    public ResponseEntity<CartItemResponseDTO> createCartItem(@RequestBody CartItemRequestDTO dto) {
+        return ResponseEntity.ok(cartItemService.save(dto));
     }
 
-    // ✅ Get by ID
     @GetMapping("/{id}")
-    public CartItemResponseDTO getCartItemById(@PathVariable Long id) {
-        return cartItemService.getById(id);
+    public ResponseEntity<CartItemResponseDTO> getCartItemById(@PathVariable Long id) {
+        return ResponseEntity.ok(cartItemService.getById(id));
     }
 
-    // ✅ Get all
     @GetMapping
-    public List<CartItemResponseDTO> getAllCartItems() {
-        return cartItemService.getAll();
+    public ResponseEntity<List<CartItemResponseDTO>> getAllCartItems() {
+        return ResponseEntity.ok(cartItemService.getAll());
     }
 
-    // ✅ Delete
     @DeleteMapping("/{id}")
-    public String deleteCartItem(@PathVariable Long id) {
-        cartItemService.delete(id);
-        return "Cart item deleted successfully!";
+    public ResponseEntity<String> deleteCartItem(@PathVariable Long id) {
+        return ResponseEntity.ok(cartItemService.delete(id));
     }
 }

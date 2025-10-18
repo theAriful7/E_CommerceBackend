@@ -9,6 +9,7 @@ import com.My.E_CommerceApp.Repository.AddressRepo;
 import com.My.E_CommerceApp.Repository.CartItemRepo;
 import com.My.E_CommerceApp.Repository.CartRepo;
 import com.My.E_CommerceApp.Repository.ProductRepo;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,72 +20,71 @@ import java.util.stream.Collectors;
 public class CartItemService {
 
     private final CartItemRepo cartItemRepo;
+    private final CartRepo cartRepo;
+    private final ProductRepo productRepo;
+    private final CartService cartService; // To recalc total
 
-    public CartItemService(CartItemRepo cartItemRepo) {
+    public CartItemService(CartItemRepo cartItemRepo, CartRepo cartRepo, ProductRepo productRepo, CartService cartService) {
         this.cartItemRepo = cartItemRepo;
+        this.cartRepo = cartRepo;
+        this.productRepo = productRepo;
+        this.cartService = cartService;
     }
 
-    @Autowired
-    private CartRepo cartRepo;
-
-    @Autowired
-    private ProductRepo productRepo;
-
-
+    // ➤ Convert DTO → Entity
     public CartItem toEntity(CartItemRequestDTO dto) {
-        CartItem item = new CartItem();
-        Cart cart = cartRepo.findById(dto.getCartId()).orElse(null);
-        Product product = productRepo.findById(dto.getProductId()).orElse(null);
+        Cart cart = cartRepo.findById(dto.getCartId())
+                .orElseThrow(() -> new EntityNotFoundException("Cart not found"));
+        Product product = productRepo.findById(dto.getProductId())
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
 
+        CartItem item = new CartItem();
         item.setCart(cart);
         item.setProduct(product);
         item.setQuantity(dto.getQuantity());
+        item.setTotalPrice(product.getPrice() * dto.getQuantity());
 
-        if (product != null) {
-            item.setTotalPrice(product.getPrice() * dto.getQuantity());
-
-        } else {
-            item.setTotalPrice(0.0);
-        }
         return item;
     }
 
-
+    // ➤ Convert Entity → DTO
     public CartItemResponseDTO toDto(CartItem item) {
         CartItemResponseDTO dto = new CartItemResponseDTO();
         dto.setId(item.getId());
-        dto.setProductName(item.getProduct() != null ? item.getProduct().getName() : null);
-        dto.setPricePerItem(item.getProduct() != null ? item.getProduct().getPrice() : 0.0);
+        dto.setProductName(item.getProduct().getName());
+        dto.setPricePerItem(item.getProduct().getPrice());
         dto.setQuantity(item.getQuantity());
         dto.setTotalPrice(item.getTotalPrice());
         return dto;
     }
 
-
-    // ✅ Create / Save new CartItem
+    // ➤ Save CartItem
     public CartItemResponseDTO save(CartItemRequestDTO dto) {
-        CartItem entity = toEntity(dto);
-        CartItem saved = cartItemRepo.save(entity);
+        CartItem item = toEntity(dto);
+        CartItem saved = cartItemRepo.save(item);
+        cartService.recalculateTotal(item.getCart()); // recalc total
         return toDto(saved);
     }
 
-    // ✅ Get CartItem by ID
+    // ➤ Get CartItem by ID
     public CartItemResponseDTO getById(Long id) {
-        return cartItemRepo.findById(id)
-                .map(this::toDto)
-                .orElse(null);
+        CartItem item = cartItemRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found"));
+        return toDto(item);
     }
 
-    // ✅ Get all CartItems
+    // ➤ Get all CartItems
     public List<CartItemResponseDTO> getAll() {
-        return cartItemRepo.findAll()
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return cartItemRepo.findAll().stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    // ✅ Delete CartItem
-    public void delete(Long id) {
-        cartItemRepo.deleteById(id);
+    // ➤ Delete CartItem
+    public String delete(Long id) {
+        CartItem item = cartItemRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found"));
+        Cart cart = item.getCart();
+        cartItemRepo.delete(item);
+        cartService.recalculateTotal(cart);
+        return "Cart item deleted successfully!";
     }
 }
