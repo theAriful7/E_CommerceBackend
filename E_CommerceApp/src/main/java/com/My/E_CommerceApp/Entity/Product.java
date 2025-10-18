@@ -35,11 +35,11 @@ public class Product extends Base{
 
     private String brand;
 
-    @Column(unique = true, nullable = false)
-    private String sku;
+//    @Column(unique = true, nullable = false)
+//    private String sku;
 
     @Column(name = "image_url")
-    private String imageUrl;
+    private String imageUrl;  //array vlist
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

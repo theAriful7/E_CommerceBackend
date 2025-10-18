@@ -19,20 +19,20 @@ public class UserResponseDTO {
     private AccountStatus accountStatus;
 
     private String profileImage;
-    private String bio;
-    private String gender;
+//    private String bio;
+//    private String gender;
 
     // Vendor info (optional)
-    private String shopName;
-    private String shopDescription;
-    private String shopLogo;
-    private Double averageRating;
+//    private String shopName;
+//    private String shopDescription;
+//    private String shopLogo;
+//    private Double averageRating;
 
     // Audit info
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
-    private String updatedBy;
+//    private String updatedBy;
 
     private List<AddressResponseDTO> addresses;
 }

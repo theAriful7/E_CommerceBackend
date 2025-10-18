@@ -32,12 +32,15 @@ public class UserService {
         dto.setRole(user.getRole());
         dto.setIsActive(user.getIsActive());
         dto.setProfileImage(user.getProfileImage());
-        dto.setGender(user.getGender());
-        dto.setBio(user.getBio());
-        dto.setShopName(user.getShopName());
-        dto.setShopDescription(user.getShopDescription());
-        dto.setShopLogo(user.getShopLogo());
-        dto.setAverageRating(user.getAverageRating());
+//        dto.setGender(user.getGender());
+//        dto.setBio(user.getBio());
+//        dto.setShopName(user.getShopName());
+//        dto.setShopDescription(user.getShopDescription());
+//        dto.setShopLogo(user.getShopLogo());
+//        dto.setAverageRating(user.getAverageRating());
+        dto.setIsActive(user.getIsActive());
+        dto.setCreatedAt(user.getCreatedAt());
+        dto.setUpdatedAt(user.getUpdatedAt());
         return dto;
     }
 

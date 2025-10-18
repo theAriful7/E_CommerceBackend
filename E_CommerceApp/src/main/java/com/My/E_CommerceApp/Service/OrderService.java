@@ -35,7 +35,7 @@ public class OrderService {
     @Autowired
     private OrderItemRepo orderItemRepo;
 
-    // ✅ Create new order
+
     public Order createOrder(OrderRequestDTO dto) {
         User user = userRepo.findById(dto.getUserId()).orElseThrow();
         Order order = new Order();

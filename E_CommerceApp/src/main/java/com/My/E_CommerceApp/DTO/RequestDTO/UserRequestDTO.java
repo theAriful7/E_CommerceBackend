@@ -1,11 +1,13 @@
 package com.My.E_CommerceApp.DTO.RequestDTO;
 
+import com.My.E_CommerceApp.Enum.AccountStatus;
 import com.My.E_CommerceApp.Enum.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -27,6 +29,18 @@ public class UserRequestDTO {
 
     private String profileImage;
 
+    private AccountStatus accountStatus;
+
     // Optional during registration (user may leave blank)
     private List<AddressRequestDTO> addresses;
+
+    private Boolean isActive;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
+    private String createdBy;
+
+
 }
