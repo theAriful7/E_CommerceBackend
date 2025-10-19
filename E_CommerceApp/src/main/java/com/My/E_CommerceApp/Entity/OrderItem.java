@@ -1,9 +1,6 @@
 package com.My.E_CommerceApp.Entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -29,7 +26,9 @@ public class OrderItem extends Base{
 
     private Integer quantity;
 
-    private Double price;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal price;
 
-    private Double totalPrice;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal totalPrice;
 }

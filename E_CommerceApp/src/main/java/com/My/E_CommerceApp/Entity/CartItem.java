@@ -28,15 +28,14 @@ public class CartItem extends Base{
     private Integer quantity = 1;
 
     @Column(name = "price_per_item", nullable = false)
-    private Double pricePerItem;
+    private BigDecimal pricePerItem;
 
     @Column(name = "total_price", nullable = false)
-    private Double totalPrice;
+    private BigDecimal totalPrice;
 
-    // ✅ Automatically calculate total price
     public void calculateTotal() {
         if (pricePerItem != null && quantity != null) {
-            this.totalPrice = pricePerItem * quantity;
+            this.totalPrice = pricePerItem.multiply(BigDecimal.valueOf(quantity));
         }
     }
 }

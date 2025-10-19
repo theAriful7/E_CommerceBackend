@@ -4,9 +4,11 @@ import com.My.E_CommerceApp.DTO.RequestDTO.PaymentRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.PaymentResponseDTO;
 import com.My.E_CommerceApp.Entity.Order;
 import com.My.E_CommerceApp.Entity.Payment;
+import com.My.E_CommerceApp.Enum.PaymentStatus;
 import com.My.E_CommerceApp.Repository.OrderRepo;
 import com.My.E_CommerceApp.Repository.PaymentRepo;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,63 +25,61 @@ public class PaymentService {
         this.orderRepo = orderRepo;
     }
 
-    // 🧱 DTO → Entity conversion
+    // ✅ DTO → Entity
     public Payment toEntity(PaymentRequestDTO dto) {
-        Payment payment = new Payment();
-
-        // orderId থেকে Order Entity বের করা
         Order order = orderRepo.findById(dto.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + dto.getOrderId()));
 
+        Payment payment = new Payment();
         payment.setOrder(order);
         payment.setAmount(dto.getAmount());
         payment.setPaymentMethod(dto.getPaymentMethod());
-        payment.setPaymentStatus("PENDING"); // শুরুতে সবসময় Pending
+        payment.setPaymentStatus(PaymentStatus.PENDING);
         payment.setPaymentDate(LocalDateTime.now());
-
         return payment;
     }
 
-    // 🧾 Entity → Response DTO conversion
-    public PaymentResponseDTO toResponse(Payment payment) {
-        PaymentResponseDTO res = new PaymentResponseDTO();
-        res.setId(payment.getId());
-        res.setOrderId(payment.getOrder().getId());
-        res.setAmount(payment.getAmount());
-        res.setPaymentMethod(payment.getPaymentMethod());
-        res.setPaymentStatus(payment.getPaymentStatus());
-        res.setPaymentDate(payment.getPaymentDate());
-        return res;
+    // ✅ Entity → DTO
+    public PaymentResponseDTO toDto(Payment payment) {
+        PaymentResponseDTO dto = new PaymentResponseDTO();
+        dto.setId(payment.getId());
+        dto.setOrderId(payment.getOrder().getId());
+        dto.setAmount(payment.getAmount());
+        dto.setPaymentMethod(payment.getPaymentMethod());
+        dto.setPaymentStatus(payment.getPaymentStatus());
+        dto.setPaymentDate(payment.getPaymentDate());
+        return dto;
     }
 
     // ✅ Create Payment
+    @Transactional
     public PaymentResponseDTO createPayment(PaymentRequestDTO dto) {
         Payment payment = toEntity(dto);
         Payment saved = paymentRepo.save(payment);
-        return toResponse(saved);
+        return toDto(saved);
     }
 
     // ✅ Get Payment by ID
     public PaymentResponseDTO getPaymentById(Long id) {
         Payment payment = paymentRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Payment not found with ID: " + id));
-        return toResponse(payment);
+        return toDto(payment);
     }
 
     // ✅ Get All Payments
     public List<PaymentResponseDTO> getAllPayments() {
-        List<Payment> payments = paymentRepo.findAll();
-        return payments.stream().map(this::toResponse).collect(Collectors.toList());
+        return paymentRepo.findAll()
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-    // ✅ Update Payment Status
-    public PaymentResponseDTO updatePaymentStatus(Long id, String status) {
+    public PaymentResponseDTO updatePaymentStatus(Long id, PaymentStatus status) {
         Payment payment = paymentRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Payment not found with ID: " + id));
 
-        payment.setPaymentStatus(status.toUpperCase());
-        paymentRepo.save(payment);
-        return toResponse(payment);
+        payment.setPaymentStatus(status); // এখন String নয়, enum
+        return toDto(paymentRepo.save(payment));
     }
 
     // ✅ Delete Payment

@@ -21,7 +21,7 @@ import java.util.UUID;
 @Table(name = "orders")
 public class Order extends Base{
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "order_number", nullable = false, unique = true)
     private String orderNumber;
 
 
@@ -34,8 +34,8 @@ public class Order extends Base{
     private List<OrderItem> orderItems = new ArrayList<>();
 
 
-    @Column(nullable = false)
-    private Double totalAmount;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -43,7 +43,20 @@ public class Order extends Base{
 
     private LocalDateTime orderDate;
 
-    private String shippingAddress;
+    @ManyToOne
+    @JoinColumn(name = "shipping_address_id")
+    private Address shippingAddress;
+
+
+    public void addOrderItem(OrderItem item) {
+        orderItems.add(item);
+        item.setOrder(this);
+    }
+
+    public void removeOrderItem(OrderItem item) {
+        orderItems.remove(item);
+        item.setOrder(null);
+    }
 
     @PrePersist
     protected void onCreate() {

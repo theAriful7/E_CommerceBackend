@@ -11,6 +11,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,7 +42,9 @@ public class CartService {
         dto.setId(cart.getId());
         dto.setUserName(cart.getUser().getFullName());
         dto.setTotalItems(cart.getItems().stream().mapToInt(CartItem::getQuantity).sum());
-        dto.setTotalPrice(cart.getItems().stream().mapToDouble(CartItem::getTotalPrice).sum());
+        dto.setTotalPrice(cart.getItems().stream()
+                .map(CartItem::getTotalPrice)          // BigDecimal নাও
+                .reduce(BigDecimal.ZERO, BigDecimal::add)); // safe যোগফল
         return dto;
     }
 
@@ -73,7 +76,10 @@ public class CartService {
 
     // ➤ Recalculate total price (optional helper for CartItems)
     public void recalculateTotal(Cart cart) {
-        double total = cart.getItems().stream().mapToDouble(CartItem::getTotalPrice).sum();
+        BigDecimal total = cart.getItems().stream()
+                .map(CartItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add); // BigDecimal safe addition
+
         cart.setTotalPrice(total);
         cartRepo.save(cart);
     }

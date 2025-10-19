@@ -42,7 +42,7 @@ public class CartItemService {
         item.setCart(cart);
         item.setProduct(product);
         item.setQuantity(dto.getQuantity());
-        item.setTotalPrice(product.getPrice() * dto.getQuantity());
+        item.setTotalPrice(product.getPrice());
 
         return item;
     }

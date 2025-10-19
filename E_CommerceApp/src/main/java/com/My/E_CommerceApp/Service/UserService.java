@@ -5,6 +5,7 @@ import com.My.E_CommerceApp.DTO.RequestDTO.UserRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.UserResponseDTO;
 import com.My.E_CommerceApp.Entity.User;
 import com.My.E_CommerceApp.Enum.Role;
+import com.My.E_CommerceApp.Exception.CustomException.AlreadyExistsException;
 import com.My.E_CommerceApp.Repository.UserRepo;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +61,7 @@ public class UserService {
     public UserResponseDTO register(UserRequestDTO dto) {
         boolean emailExists = userRepo.findAll().stream()
                 .anyMatch(u -> u.getEmail().equalsIgnoreCase(dto.getEmail()));
-        if (emailExists) throw new RuntimeException("Email already registered!");
+        if (emailExists) throw new AlreadyExistsException("😅 ভাই, এই ইমেইলটা তো আগেই রেজিস্টার আছে! অন্যটা দাও না 😉");
 
         User saved = userRepo.save(toEntity(dto));
         return toDto(saved);

@@ -31,6 +31,8 @@ public class Base implements Serializable {
     @Column(name = "updated_by")
     private String updatedBy;
 
+
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

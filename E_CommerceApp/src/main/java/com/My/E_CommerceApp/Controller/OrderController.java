@@ -40,7 +40,8 @@ public class OrderController {
 
     // ✅ Update order status
     @PutMapping("/{id}/status")
-    public OrderResponseDTO updateStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
+    public OrderResponseDTO updateStatus(@PathVariable Long id,
+                                         @RequestParam OrderStatus status) {
         return orderService.updateStatus(id, status);
     }
 

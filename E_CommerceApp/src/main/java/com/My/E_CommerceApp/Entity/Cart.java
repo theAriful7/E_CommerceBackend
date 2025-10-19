@@ -26,7 +26,7 @@ public class Cart extends Base{
     private List<CartItem> items = new ArrayList<>();
 
     @Column(name = "total_price", nullable = false)
-    private Double totalPrice = 0.0;
+    private BigDecimal totalPrice;
 
 
     public void addItem(CartItem item) {
@@ -45,9 +45,10 @@ public class Cart extends Base{
 
     public void recalculateTotal() {
         this.totalPrice = items.stream()
-                .mapToDouble(CartItem::getTotalPrice)
-                .sum();
+                .map(CartItem::getTotalPrice)      // BigDecimal নাও
+                .reduce(BigDecimal.ZERO, BigDecimal::add); // সব যোগ করো safely
     }
+
 
 
     public int getTotalItems() {

@@ -12,7 +12,9 @@ import com.My.E_CommerceApp.Enum.OrderStatus;
 import com.My.E_CommerceApp.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,52 +23,55 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepo orderRepo;
+    private final UserRepo userRepo;
+    private final ProductRepo productRepo;
+    private final OrderItemRepo orderItemRepo;
 
-    public OrderService(OrderRepo orderRepo) {
+    public OrderService(OrderRepo orderRepo, UserRepo userRepo,
+                        ProductRepo productRepo, OrderItemRepo orderItemRepo) {
         this.orderRepo = orderRepo;
+        this.userRepo = userRepo;
+        this.productRepo = productRepo;
+        this.orderItemRepo = orderItemRepo;
     }
 
-    @Autowired
-    private UserRepo userRepo;
-
-    @Autowired
-    private ProductRepo productRepo;
-
-    @Autowired
-    private OrderItemRepo orderItemRepo;
-
-
+    @Transactional
     public Order createOrder(OrderRequestDTO dto) {
-        User user = userRepo.findById(dto.getUserId()).orElseThrow();
+        // 1️⃣ Fetch user
+        User user = userRepo.findById(dto.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 2️⃣ Create Order
         Order order = new Order();
         order.setUser(user);
         order.setShippingAddress(dto.getShippingAddress());
         order.setStatus(OrderStatus.PENDING);
 
-        double totalAmount = 0.0;
         List<OrderItem> orderItems = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
 
+        // 3️⃣ Loop through items
         for (OrderItemRequestDTO itemDTO : dto.getItems()) {
-            Product product = productRepo.findById(itemDTO.getProductId()).orElseThrow();
+            Product product = productRepo.findById(itemDTO.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
             orderItem.setProduct(product);
             orderItem.setQuantity(itemDTO.getQuantity());
-            orderItem.setTotalPrice(product.getPrice() * itemDTO.getQuantity());
+            orderItem.setPrice(product.getPrice()); // Single price
+            orderItem.setTotalPrice(product.getPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity())));
 
-            totalAmount += orderItem.getTotalPrice();
+            totalAmount = totalAmount.add(orderItem.getTotalPrice());
             orderItems.add(orderItem);
         }
 
         order.setTotalAmount(totalAmount);
         order.setOrderItems(orderItems);
 
-        Order savedOrder = orderRepo.save(order);
-        orderItemRepo.saveAll(orderItems);
-
-        return savedOrder;
+        // 4️⃣ Save order (cascades orderItems automatically)
+        return orderRepo.save(order);
     }
-
 
     // ✅ Convert Entity → DTO
     public OrderResponseDTO toDto(Order order) {
@@ -76,27 +81,28 @@ public class OrderService {
         dto.setUserId(order.getUser().getId());
         dto.setTotalAmount(order.getTotalAmount());
         dto.setStatus(order.getStatus());
-        dto.setOrderDate(order.getOrderDate());
         dto.setShippingAddress(order.getShippingAddress());
+        dto.setOrderDate(order.getCreatedAt()); // Use Base.createdAt
 
-        List<OrderItemResponseDTO> itemDTOs = new ArrayList<>();
-        for (OrderItem item : order.getOrderItems()) {
+        List<OrderItemResponseDTO> itemDTOs = order.getOrderItems().stream().map(item -> {
             OrderItemResponseDTO i = new OrderItemResponseDTO();
             i.setProductId(item.getProduct().getId());
             i.setProductName(item.getProduct().getName());
             i.setQuantity(item.getQuantity());
-            i.setPricePerItem(item.getProduct().getPrice());
+            i.setPrice(item.getPrice());
             i.setTotalPrice(item.getTotalPrice());
-            itemDTOs.add(i);
-        }
+            return i;
+        }).collect(Collectors.toList());
 
         dto.setItems(itemDTOs);
         return dto;
     }
 
     // ✅ Save Order + Return DTO
+    @Transactional
     public OrderResponseDTO save(OrderRequestDTO dto) {
-        return toDto(createOrder(dto));
+        Order order = createOrder(dto);
+        return toDto(order);
     }
 
     // ✅ Find by ID
@@ -114,7 +120,8 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ Update Status (optional)
+    // ✅ Update Status
+    @Transactional
     public OrderResponseDTO updateStatus(Long id, OrderStatus newStatus) {
         Order order = orderRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -123,6 +130,7 @@ public class OrderService {
     }
 
     // ✅ Delete
+    @Transactional
     public void delete(Long id) {
         orderRepo.deleteById(id);
     }
