@@ -4,6 +4,7 @@ import com.My.E_CommerceApp.Enum.ProductStatus;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ProductResponseDTO {
@@ -12,7 +13,7 @@ public class ProductResponseDTO {
     private String description;
     private BigDecimal price;
     private Integer stock;
-    private String imageUrl;
+    private List<String> imageUrls;
     private Double discount;   // optional
     private String brand;      // optional
     private String categoryName;

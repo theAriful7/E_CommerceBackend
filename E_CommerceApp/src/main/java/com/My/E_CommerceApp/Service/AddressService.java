@@ -3,7 +3,10 @@ package com.My.E_CommerceApp.Service;
 import com.My.E_CommerceApp.DTO.RequestDTO.AddressRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.AddressResponseDTO;
 import com.My.E_CommerceApp.Entity.Address;
+import com.My.E_CommerceApp.Entity.User;
 import com.My.E_CommerceApp.Repository.AddressRepo;
+import com.My.E_CommerceApp.Repository.UserRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,30 +14,41 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class AddressService {
 
     private final AddressRepo addressRepo;
+    private final UserRepo userRepo;
 
-    public AddressService(AddressRepo addressRepo) {
-        this.addressRepo = addressRepo;
-    }
+
 
     private Address toEntity(AddressRequestDTO dto) {
         Address address = new Address();
+        // 🔹 fetch user and set
+        User user = userRepo.findById(dto.getUser_id())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUser_id()));
+        address.setUser(user);
+        address.setRecipientName(dto.getRecipientName());
         address.setStreet(dto.getStreet());
         address.setCity(dto.getCity());
+        address.setState(dto.getState());
         address.setCountry(dto.getCountry());
         address.setPostalCode(dto.getPostalCode());
+        address.setPhone(dto.getPhone());
         return address;
     }
 
     private AddressResponseDTO toDto(Address entity) {
         AddressResponseDTO dto = new AddressResponseDTO();
+
+        dto.setRecipientName(entity.getRecipientName());
         dto.setId(entity.getId());
         dto.setStreet(entity.getStreet());
         dto.setCity(entity.getCity());
+        dto.setState(entity.getState());
         dto.setCountry(entity.getCountry());
         dto.setPostalCode(entity.getPostalCode());
+        dto.setPhone(entity.getPhone());
         return dto;
     }
 

@@ -24,7 +24,7 @@ public class UserRequestDTO {
     private String phone;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Size(min = 4, message = "Password must be at least 4 characters")
     private String password;
 
     private String profileImage;
@@ -32,7 +32,7 @@ public class UserRequestDTO {
     private AccountStatus accountStatus;
 
     // Optional during registration (user may leave blank)
-    private List<AddressRequestDTO> addresses;
+//    private List<AddressRequestDTO> addresses;
 
     private Boolean isActive;
 

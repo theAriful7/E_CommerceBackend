@@ -51,4 +51,11 @@ public class OrderController {
         orderService.delete(id);
         return "Order deleted successfully!";
     }
+
+    // ✅ Checkout endpoint
+    @PostMapping("/checkout")
+    public OrderResponseDTO checkout(@RequestParam Long userId,
+                                     @RequestParam Long addressId) {
+        return orderService.checkout(userId, addressId);
+    }
 }

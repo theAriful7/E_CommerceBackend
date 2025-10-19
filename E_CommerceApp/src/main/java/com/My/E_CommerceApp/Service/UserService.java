@@ -2,10 +2,10 @@ package com.My.E_CommerceApp.Service;
 
 import com.My.E_CommerceApp.DTO.RequestDTO.LoginRequestDTO;;
 import com.My.E_CommerceApp.DTO.RequestDTO.UserRequestDTO;
+import com.My.E_CommerceApp.DTO.ResponseDTO.AddressResponseDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.UserResponseDTO;
 import com.My.E_CommerceApp.Entity.User;
 import com.My.E_CommerceApp.Enum.Role;
-import com.My.E_CommerceApp.Exception.CustomException.AlreadyExistsException;
 import com.My.E_CommerceApp.Repository.UserRepo;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +42,16 @@ public class UserService {
         dto.setIsActive(user.getIsActive());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
+        // 🟢 Entity List → DTO List mapping
+        List<AddressResponseDTO> addressDTOs = user.getAddresses().stream().map(address -> {
+            AddressResponseDTO addressDTO = new AddressResponseDTO();
+            addressDTO.setId(address.getId());
+            addressDTO.setStreet(address.getStreet());
+            addressDTO.setCity(address.getCity());
+            addressDTO.setCountry(address.getCountry());
+            addressDTO.setPostalCode(address.getPostalCode());
+            return addressDTO;
+        }).toList();
         return dto;
     }
 
@@ -61,7 +71,7 @@ public class UserService {
     public UserResponseDTO register(UserRequestDTO dto) {
         boolean emailExists = userRepo.findAll().stream()
                 .anyMatch(u -> u.getEmail().equalsIgnoreCase(dto.getEmail()));
-        if (emailExists) throw new AlreadyExistsException("😅 ভাই, এই ইমেইলটা তো আগেই রেজিস্টার আছে! অন্যটা দাও না 😉");
+        if (emailExists) throw new RuntimeException("😅 ভাই, এই ইমেইলটা তো আগেই রেজিস্টার আছে! অন্যটা দাও না 😉");
 
         User saved = userRepo.save(toEntity(dto));
         return toDto(saved);

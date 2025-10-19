@@ -29,7 +29,7 @@ public class CategoryService {
         return dto;
     }
 
-    // ✅ Convert DTO → Entity
+
     private Category toEntity(CategoryRequestDTO dto) {
         Category category = new Category();
         category.setName(dto.getName());
@@ -37,7 +37,7 @@ public class CategoryService {
         return category;
     }
 
-    // ✅ Create
+
     @Transactional
     public CategoryResponseDTO createCategory(CategoryRequestDTO dto) {
         boolean exists = categoryRepo.existsByNameIgnoreCase(dto.getName());
@@ -47,7 +47,7 @@ public class CategoryService {
         return toDto(saved);
     }
 
-    // ✅ Get All
+
     public List<CategoryResponseDTO> getAllCategories() {
         return categoryRepo.findAll()
                 .stream()
@@ -55,14 +55,14 @@ public class CategoryService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ Get By Id
+
     public CategoryResponseDTO getCategoryById(Long id) {
         Category category = categoryRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
         return toDto(category);
     }
 
-    // ✅ Update
+
     @Transactional
     public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO dto) {
         Category existing = categoryRepo.findById(id)
@@ -75,7 +75,7 @@ public class CategoryService {
         return toDto(updated);
     }
 
-    // ✅ Delete
+
     @Transactional
     public String deleteCategory(Long id) {
         Category category = categoryRepo.findById(id)

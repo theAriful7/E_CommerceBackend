@@ -14,6 +14,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,7 +32,7 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setStock(dto.getStock());
-        product.setImageUrl(dto.getImageUrl());
+        product.setImageUrls(dto.getImageUrls() != null ? dto.getImageUrls() : new ArrayList<>());
         product.setCategory(category);
         product.setVendor(vendor);
         product.setDiscount(dto.getDiscount() != null ? dto.getDiscount() : 0.0);
@@ -47,7 +48,7 @@ public class ProductService {
         dto.setDescription(product.getDescription());
         dto.setPrice(product.getPrice());
         dto.setStock(product.getStock());
-        dto.setImageUrl(product.getImageUrl());
+        dto.setImageUrls(product.getImageUrls());
         dto.setDiscount(product.getDiscount());
         dto.setBrand(product.getBrand());
         dto.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
@@ -100,7 +101,7 @@ public class ProductService {
         existing.setDescription(dto.getDescription());
         existing.setPrice(dto.getPrice());
         existing.setStock(dto.getStock());
-        existing.setImageUrl(dto.getImageUrl());
+        existing.setImageUrls(dto.getImageUrls() != null ? dto.getImageUrls() : existing.getImageUrls());
         existing.setCategory(category);
         existing.setDiscount(dto.getDiscount() != null ? dto.getDiscount() : existing.getDiscount());
         existing.setBrand(dto.getBrand() != null ? dto.getBrand() : existing.getBrand());

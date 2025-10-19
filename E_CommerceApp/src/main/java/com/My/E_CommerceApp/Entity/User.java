@@ -2,6 +2,7 @@ package com.My.E_CommerceApp.Entity;
 
 import com.My.E_CommerceApp.Enum.AccountStatus;
 import com.My.E_CommerceApp.Enum.Role;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -59,6 +60,7 @@ public class User extends Base{
     private List<Product> products = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Order> orders = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

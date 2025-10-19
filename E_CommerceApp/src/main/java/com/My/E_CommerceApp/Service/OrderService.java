@@ -4,72 +4,73 @@ import com.My.E_CommerceApp.DTO.RequestDTO.OrderItemRequestDTO;
 import com.My.E_CommerceApp.DTO.RequestDTO.OrderRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.OrderItemResponseDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.OrderResponseDTO;
-import com.My.E_CommerceApp.Entity.Order;
-import com.My.E_CommerceApp.Entity.OrderItem;
-import com.My.E_CommerceApp.Entity.Product;
-import com.My.E_CommerceApp.Entity.User;
+import com.My.E_CommerceApp.Entity.*;
 import com.My.E_CommerceApp.Enum.OrderStatus;
+import com.My.E_CommerceApp.Exception.CustomException.ResourceNotFoundException;
 import com.My.E_CommerceApp.Repository.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepo orderRepo;
     private final UserRepo userRepo;
     private final ProductRepo productRepo;
     private final OrderItemRepo orderItemRepo;
-
-    public OrderService(OrderRepo orderRepo, UserRepo userRepo,
-                        ProductRepo productRepo, OrderItemRepo orderItemRepo) {
-        this.orderRepo = orderRepo;
-        this.userRepo = userRepo;
-        this.productRepo = productRepo;
-        this.orderItemRepo = orderItemRepo;
-    }
+    private final AddressRepo addressRepo;
+    private final CartItemRepo cartItemRepo;
 
     @Transactional
     public Order createOrder(OrderRequestDTO dto) {
         // 1️⃣ Fetch user
         User user = userRepo.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
 
-        // 2️⃣ Create Order
+        // 2️⃣ Fetch shipping address
+        Address address = addressRepo.findById(dto.getShippingAddressId())
+                .orElseThrow(() -> new RuntimeException("Shipping address not found with id: " + dto.getShippingAddressId()));
+
+        // 3️⃣ Create new Order
         Order order = new Order();
         order.setUser(user);
-        order.setShippingAddress(dto.getShippingAddress());
+        order.setShippingAddress(address);
+        order.setCreatedAt(dto.getCreatedAt());
+        order.setUpdatedAt(dto.getUpdatedAt());
         order.setStatus(OrderStatus.PENDING);
 
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        // 3️⃣ Loop through items
+        // 4️⃣ Add Order Items
         for (OrderItemRequestDTO itemDTO : dto.getItems()) {
             Product product = productRepo.findById(itemDTO.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
+                    .orElseThrow(() -> new RuntimeException("Product not found with id: " + itemDTO.getProductId()));
 
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
             orderItem.setProduct(product);
             orderItem.setQuantity(itemDTO.getQuantity());
-            orderItem.setPrice(product.getPrice()); // Single price
+            orderItem.setPrice(product.getPrice());
             orderItem.setTotalPrice(product.getPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity())));
 
             totalAmount = totalAmount.add(orderItem.getTotalPrice());
             orderItems.add(orderItem);
         }
 
+        // 5️⃣ Set totals and save order
         order.setTotalAmount(totalAmount);
         order.setOrderItems(orderItems);
 
-        // 4️⃣ Save order (cascades orderItems automatically)
         return orderRepo.save(order);
     }
 
@@ -134,4 +135,58 @@ public class OrderService {
     public void delete(Long id) {
         orderRepo.deleteById(id);
     }
+
+    @Transactional
+    public OrderResponseDTO checkout(Long userId, Long addressId) {
+        // 1️⃣ Fetch User
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        // 2️⃣ Fetch Shipping Address
+        Address address = addressRepo.findById(addressId)
+                .orElseThrow(() -> new RuntimeException("Shipping address not found with id: " + addressId));
+
+        // 3️⃣ Fetch Cart Items
+        List<CartItem> cartItems = cartItemRepo.findByUser_Id(userId);
+        if (cartItems.isEmpty()) {
+            throw new RuntimeException("Cart is empty. Add products before checkout.");
+        }
+
+        // 4️⃣ Create new Order
+        Order order = new Order();
+        order.setUser(user);
+        order.setShippingAddress(address);
+        order.setStatus(OrderStatus.PENDING);
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        // 5️⃣ Convert CartItems → OrderItems
+        for (CartItem cartItem : cartItems) {
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(order);
+            orderItem.setProduct(cartItem.getProduct());
+            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setPrice(cartItem.getProduct().getPrice());
+            orderItem.setTotalPrice(cartItem.getProduct().getPrice()
+                    .multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+
+            totalAmount = totalAmount.add(orderItem.getTotalPrice());
+            orderItems.add(orderItem);
+        }
+
+        order.setOrderItems(orderItems);
+        order.setTotalAmount(totalAmount);
+
+        // 6️⃣ Save Order (cascades OrderItems)
+        Order savedOrder = orderRepo.save(order);
+
+        // 7️⃣ Clear User's Cart
+        cartItemRepo.deleteAll(cartItems);
+
+        // 8️⃣ Return OrderResponseDTO
+        return this.toDto(savedOrder);
+    }
+
+
 }

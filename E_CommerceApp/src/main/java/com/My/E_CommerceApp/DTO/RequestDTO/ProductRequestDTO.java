@@ -3,6 +3,7 @@ package com.My.E_CommerceApp.DTO.RequestDTO;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ProductRequestDTO {
@@ -11,7 +12,7 @@ public class ProductRequestDTO {
     private String description;
     private BigDecimal price;
     private Integer stock;
-    private String imageUrl;
+    private List<String> imageUrls;
     private Long categoryId;
     private Double discount;
     private String brand;

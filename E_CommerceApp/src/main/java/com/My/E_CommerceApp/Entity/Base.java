@@ -36,6 +36,7 @@ public class Base implements Serializable {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
         // this.createdBy = SecurityContextHolder.getContext().getAuthentication().getName();
     }
 

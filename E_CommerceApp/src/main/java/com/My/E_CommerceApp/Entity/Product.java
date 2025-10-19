@@ -38,8 +38,13 @@ public class Product extends Base{
 //    @Column(unique = true, nullable = false)
 //    private String sku;
 
+//    @Column(name = "image_url")
+//    private String[] imageUrl;
+
+    @ElementCollection
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "image_url")
-    private String imageUrl;  //array vlist
+    private List<String> imageUrls = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
