@@ -33,6 +33,7 @@ public class UserService {
         dto.setRole(user.getRole());
         dto.setIsActive(user.getIsActive());
         dto.setProfileImage(user.getProfileImage());
+        dto.setAccountStatus(user.getAccountStatus());
 //        dto.setGender(user.getGender());
 //        dto.setBio(user.getBio());
 //        dto.setShopName(user.getShopName());
