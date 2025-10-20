@@ -2,6 +2,7 @@ package com.My.E_CommerceApp.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Getter
 @Setter
+@EntityListeners(AuditingEntityListener.class)
 public class Base implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,14 +37,27 @@ public class Base implements Serializable {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-        // this.createdBy = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
+        // Set default createdBy if not set
+        if (createdBy == null) {
+            createdBy = "SYSTEM"; // Default value
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-        // this.updatedBy = SecurityContextHolder.getContext().getAuthentication().getName();
+        // Set default updatedBy if not set
+        if (updatedBy == null) {
+            updatedBy = "SYSTEM"; // Default value
+        }
     }
 }

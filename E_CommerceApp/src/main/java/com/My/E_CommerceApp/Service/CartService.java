@@ -1,6 +1,7 @@
 package com.My.E_CommerceApp.Service;
 
 import com.My.E_CommerceApp.DTO.RequestDTO.CartRequestDTO;
+import com.My.E_CommerceApp.DTO.ResponseDTO.CartItemResponseDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.CartResponseDTO;
 import com.My.E_CommerceApp.Entity.Cart;
 import com.My.E_CommerceApp.Entity.CartItem;
@@ -8,6 +9,7 @@ import com.My.E_CommerceApp.Entity.User;
 import com.My.E_CommerceApp.Repository.CartRepo;
 import com.My.E_CommerceApp.Repository.UserRepo;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,13 +20,14 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class CartService {
-
     private final CartRepo cartRepo;
     private final UserRepo userRepo;
+    private final CartItemService cartItemService;
 
-    public CartService(CartRepo cartRepo, UserRepo userRepo) {
+    public CartService(CartRepo cartRepo, UserRepo userRepo, @Lazy CartItemService cartItemService) {
         this.cartRepo = cartRepo;
         this.userRepo = userRepo;
+        this.cartItemService = cartItemService;
     }
 
     // ➤ Convert DTO → Entity
@@ -43,8 +46,15 @@ public class CartService {
         dto.setUserName(cart.getUser().getFullName());
         dto.setTotalItems(cart.getItems().stream().mapToInt(CartItem::getQuantity).sum());
         dto.setTotalPrice(cart.getItems().stream()
-                .map(CartItem::getTotalPrice)          // BigDecimal নাও
-                .reduce(BigDecimal.ZERO, BigDecimal::add)); // safe যোগফল
+                .map(CartItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        // ✅ FIX: Convert CartItems to CartItemResponseDTOs
+        List<CartItemResponseDTO> itemDTOs = cart.getItems().stream()
+                .map(cartItemService::toDto)
+                .collect(Collectors.toList());
+        dto.setItems(itemDTOs);
+
         return dto;
     }
 
@@ -83,5 +93,4 @@ public class CartService {
         cart.setTotalPrice(total);
         cartRepo.save(cart);
     }
-
 }

@@ -26,7 +26,7 @@ public class Cart extends Base{
     private List<CartItem> items = new ArrayList<>();
 
     @Column(name = "total_price", nullable = false)
-    private BigDecimal totalPrice;
+    private BigDecimal totalPrice =  BigDecimal.ZERO;
 
 
     public void addItem(CartItem item) {

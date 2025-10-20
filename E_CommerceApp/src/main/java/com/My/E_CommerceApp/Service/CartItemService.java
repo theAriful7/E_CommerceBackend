@@ -5,31 +5,27 @@ import com.My.E_CommerceApp.DTO.ResponseDTO.CartItemResponseDTO;
 import com.My.E_CommerceApp.Entity.Cart;
 import com.My.E_CommerceApp.Entity.CartItem;
 import com.My.E_CommerceApp.Entity.Product;
-import com.My.E_CommerceApp.Repository.AddressRepo;
-import com.My.E_CommerceApp.Repository.CartItemRepo;
-import com.My.E_CommerceApp.Repository.CartRepo;
-import com.My.E_CommerceApp.Repository.ProductRepo;
+import com.My.E_CommerceApp.Entity.User;
+import com.My.E_CommerceApp.Repository.*;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CartItemService {
 
     private final CartItemRepo cartItemRepo;
     private final CartRepo cartRepo;
     private final ProductRepo productRepo;
-    private final CartService cartService; // To recalc total
-
-    public CartItemService(CartItemRepo cartItemRepo, CartRepo cartRepo, ProductRepo productRepo, CartService cartService) {
-        this.cartItemRepo = cartItemRepo;
-        this.cartRepo = cartRepo;
-        this.productRepo = productRepo;
-        this.cartService = cartService;
-    }
+    @Lazy
+    private final CartService cartService;
 
     // ➤ Convert DTO → Entity
     public CartItem toEntity(CartItemRequestDTO dto) {
@@ -42,7 +38,14 @@ public class CartItemService {
         item.setCart(cart);
         item.setProduct(product);
         item.setQuantity(dto.getQuantity());
-        item.setTotalPrice(product.getPrice());
+        item.setPricePerItem(product.getPrice());
+
+        // ✅ ONLY THIS: Set the user from the cart
+        item.setUser(cart.getUser());
+
+        // Calculate total price
+        BigDecimal totalPrice = product.getPrice().multiply(BigDecimal.valueOf(dto.getQuantity()));
+        item.setTotalPrice(totalPrice);
 
         return item;
     }
@@ -52,7 +55,7 @@ public class CartItemService {
         CartItemResponseDTO dto = new CartItemResponseDTO();
         dto.setId(item.getId());
         dto.setProductName(item.getProduct().getName());
-        dto.setPricePerItem(item.getProduct().getPrice());
+        dto.setPricePerItem(item.getPricePerItem());
         dto.setQuantity(item.getQuantity());
         dto.setTotalPrice(item.getTotalPrice());
         return dto;
