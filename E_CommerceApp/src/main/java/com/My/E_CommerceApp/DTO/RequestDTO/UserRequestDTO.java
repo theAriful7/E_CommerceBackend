@@ -20,7 +20,7 @@ public class UserRequestDTO {
     @Email(message = "Invalid email format")
     private String email;
 
-    @Size(min = 10, max = 15, message = "Phone number must be between 10–15 characters")
+    @Size(min = 2, max = 20, message = "Phone number must be between 10–15 characters")
     private String phone;
 
     @NotBlank(message = "Password is required")

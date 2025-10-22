@@ -8,6 +8,4 @@ import java.math.BigDecimal;
 public class CartRequestDTO {
     private Long userId;
     private BigDecimal totalPrice = BigDecimal.ZERO;
-
-
 }

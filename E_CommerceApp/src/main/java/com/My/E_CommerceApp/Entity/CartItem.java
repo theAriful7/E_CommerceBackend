@@ -21,11 +21,6 @@ public class CartItem extends Base{
     private Cart cart;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
@@ -35,12 +30,16 @@ public class CartItem extends Base{
     @Column(name = "price_per_item", nullable = false)
     private BigDecimal pricePerItem;
 
-    @Column(name = "total_price", nullable = false)
-    private BigDecimal totalPrice;
+    // ✅ FIXED: Remove totalPrice field and use calculated method
+    public BigDecimal getTotalPrice() {
+        return pricePerItem.multiply(BigDecimal.valueOf(quantity));
+    }
 
-    public void calculateTotal() {
-        if (pricePerItem != null && quantity != null) {
-            this.totalPrice = pricePerItem.multiply(BigDecimal.valueOf(quantity));
+    // ✅ Update quantity with validation
+    public void updateQuantity(Integer newQuantity) {
+        if (newQuantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
         }
+        this.quantity = newQuantity;
     }
 }

@@ -1,14 +1,18 @@
 package com.My.E_CommerceApp.Service;
 
+import com.My.E_CommerceApp.DTO.RequestDTO.CartItemRequestDTO;
 import com.My.E_CommerceApp.DTO.RequestDTO.CartRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.CartItemResponseDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.CartResponseDTO;
 import com.My.E_CommerceApp.Entity.Cart;
 import com.My.E_CommerceApp.Entity.CartItem;
+import com.My.E_CommerceApp.Entity.Product;
 import com.My.E_CommerceApp.Entity.User;
 import com.My.E_CommerceApp.Repository.CartRepo;
+import com.My.E_CommerceApp.Repository.ProductRepo;
 import com.My.E_CommerceApp.Repository.UserRepo;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,37 +23,55 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class CartService {
     private final CartRepo cartRepo;
     private final UserRepo userRepo;
     private final CartItemService cartItemService;
+    private final ProductRepo productRepo;
 
-    public CartService(CartRepo cartRepo, UserRepo userRepo, @Lazy CartItemService cartItemService) {
-        this.cartRepo = cartRepo;
-        this.userRepo = userRepo;
-        this.cartItemService = cartItemService;
+
+
+    // ✅ FIXED: Get or Create Cart for User (Prevents duplicates)
+    public Cart getOrCreateCart(Long userId) {
+        return cartRepo.findByUserId(userId)
+                .orElseGet(() -> {
+                    User user = userRepo.findById(userId)
+                            .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+                    Cart newCart = new Cart();
+                    newCart.setUser(user);
+                    newCart.setTotalPrice(BigDecimal.ZERO);
+                    return cartRepo.save(newCart);
+                });
     }
 
-    // ➤ Convert DTO → Entity
-    public Cart toEntity(CartRequestDTO dto) {
-        User user = userRepo.findById(dto.getUserId())
-                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + dto.getUserId()));
-        Cart cart = new Cart();
-        cart.setUser(user);
-        return cart;
+    // ✅ FIXED: Create Cart with duplicate check
+    public CartResponseDTO createCart(CartRequestDTO dto) {
+        // Check if user already has a cart
+        if (cartRepo.findByUserId(dto.getUserId()).isPresent()) {
+            throw new RuntimeException("User already has a cart. Use getCartByUser instead.");
+        }
+
+        Cart saved = cartRepo.save(toEntity(dto));
+        return toDto(saved);
     }
 
-    // ➤ Convert Entity → DTO
+    // ✅ NEW: Get Cart by User ID (Most important method!)
+    public CartResponseDTO getCartByUser(Long userId) {
+        Cart cart = cartRepo.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Cart not found for user ID: " + userId));
+        return toDto(cart);
+    }
+
+    // ✅ FIXED: Consistent total calculation
     public CartResponseDTO toDto(Cart cart) {
         CartResponseDTO dto = new CartResponseDTO();
         dto.setId(cart.getId());
         dto.setUserName(cart.getUser().getFullName());
-        dto.setTotalItems(cart.getItems().stream().mapToInt(CartItem::getQuantity).sum());
-        dto.setTotalPrice(cart.getItems().stream()
-                .map(CartItem::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        dto.setTotalItems(cart.getTotalItems()); // Use entity method
+        dto.setTotalPrice(cart.getTotalPrice()); // Use entity field (already calculated)
 
-        // ✅ FIX: Convert CartItems to CartItemResponseDTOs
+        // Convert CartItems to DTOs
         List<CartItemResponseDTO> itemDTOs = cart.getItems().stream()
                 .map(cartItemService::toDto)
                 .collect(Collectors.toList());
@@ -58,9 +80,14 @@ public class CartService {
         return dto;
     }
 
-    // ➤ Create Cart
-    public CartResponseDTO createCart(CartRequestDTO dto) {
-        Cart saved = cartRepo.save(toEntity(dto));
+    // ✅ NEW: Clear cart (keep cart, remove items)
+    public CartResponseDTO clearCart(Long cartId) {
+        Cart cart = cartRepo.findById(cartId)
+                .orElseThrow(() -> new EntityNotFoundException("Cart not found"));
+
+        cart.getItems().clear();
+        cart.setTotalPrice(BigDecimal.ZERO);
+        Cart saved = cartRepo.save(cart);
         return toDto(saved);
     }
 
@@ -84,13 +111,35 @@ public class CartService {
         return "Cart deleted successfully.";
     }
 
-    // ➤ Recalculate total price (optional helper for CartItems)
-    public void recalculateTotal(Cart cart) {
-        BigDecimal total = cart.getItems().stream()
-                .map(CartItem::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add); // BigDecimal safe addition
+    private Cart toEntity(CartRequestDTO dto) {
+        User user = userRepo.findById(dto.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + dto.getUserId()));
+        Cart cart = new Cart();
+        cart.setUser(user);
+        cart.setTotalPrice(BigDecimal.ZERO);
+        return cart;
+    }
 
-        cart.setTotalPrice(total);
-        cartRepo.save(cart);
+    // ✅ Add item to cart
+    public CartResponseDTO addItemToCart(Long cartId, CartItemRequestDTO itemRequest) {
+        Cart cart = cartRepo.findById(cartId)
+                .orElseThrow(() -> new EntityNotFoundException("Cart not found"));
+
+        Product product = productRepo.findById(itemRequest.getProductId())
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+
+        cart.addItem(product, itemRequest.getQuantity());
+        Cart saved = cartRepo.save(cart);
+        return toDto(saved);
+    }
+
+    // ✅ Update item quantity
+    public CartResponseDTO updateCartItemQuantity(Long cartId, Long productId, Integer quantity) {
+        Cart cart = cartRepo.findById(cartId)
+                .orElseThrow(() -> new EntityNotFoundException("Cart not found"));
+
+        cart.updateItemQuantity(productId, quantity);
+        Cart saved = cartRepo.save(cart);
+        return toDto(saved);
     }
 }

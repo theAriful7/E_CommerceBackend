@@ -22,7 +22,7 @@ public class OderItemController {
     @PostMapping("/{orderId}")
     public OrderItemResponseDTO addOrderItem(@PathVariable Long orderId,
                                              @RequestBody OrderItemRequestDTO dto) {
-        return orderItemService.saveOrderItem(orderId, dto);
+        return orderItemService.addItemToOrder(orderId, dto);
     }
 
     // ✏️ Update existing order item (quantity change or remove if quantity 0)

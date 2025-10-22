@@ -2,10 +2,7 @@ package com.My.E_CommerceApp.Entity;
 
 import com.My.E_CommerceApp.Enum.ProductStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -37,7 +34,6 @@ public class Product extends Base{
 
 //    @Column(unique = true, nullable = false)
 //    private String sku;
-
 
 
     @ElementCollection

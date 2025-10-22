@@ -13,13 +13,25 @@ import java.util.List;
 @RequestMapping("/api/carts")
 @CrossOrigin(origins = "http://localhost:4200")
 public class CartController {
-
     private final CartService cartService;
 
     public CartController(CartService cartService) {
         this.cartService = cartService;
     }
 
+    // ✅ NEW: Get cart by User ID (Most used endpoint!)
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<CartResponseDTO> getCartByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(cartService.getCartByUser(userId));
+    }
+
+    // ✅ NEW: Clear cart items
+    @PostMapping("/{cartId}/clear")
+    public ResponseEntity<CartResponseDTO> clearCart(@PathVariable Long cartId) {
+        return ResponseEntity.ok(cartService.clearCart(cartId));
+    }
+
+    // ⚠️ WARNING: This can create duplicate carts!
     @PostMapping
     public ResponseEntity<CartResponseDTO> createCart(@RequestBody CartRequestDTO dto) {
         return ResponseEntity.ok(cartService.createCart(dto));
@@ -39,5 +51,4 @@ public class CartController {
     public ResponseEntity<String> deleteCart(@PathVariable Long id) {
         return ResponseEntity.ok(cartService.deleteCart(id));
     }
-
 }

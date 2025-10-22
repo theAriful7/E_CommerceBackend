@@ -21,73 +21,195 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CartItemService {
 
+
     private final CartItemRepo cartItemRepo;
     private final CartRepo cartRepo;
     private final ProductRepo productRepo;
-    @Lazy
-    private final CartService cartService;
 
-    // ➤ Convert DTO → Entity
-    public CartItem toEntity(CartItemRequestDTO dto) {
-        Cart cart = cartRepo.findById(dto.getCartId())
-                .orElseThrow(() -> new EntityNotFoundException("Cart not found"));
-        Product product = productRepo.findById(dto.getProductId())
-                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+    // ✅ CREATE: Add item to cart
+    public CartItemResponseDTO addItemToCart(CartItemRequestDTO requestDTO) {
+        Cart cart = cartRepo.findById(requestDTO.getCartId())
+                .orElseThrow(() -> new EntityNotFoundException("Cart not found with ID: " + requestDTO.getCartId()));
 
-        CartItem item = new CartItem();
-        item.setCart(cart);
-        item.setProduct(product);
-        item.setQuantity(dto.getQuantity());
-        item.setPricePerItem(product.getPrice());
+        Product product = productRepo.findById(requestDTO.getProductId())
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with ID: " + requestDTO.getProductId()));
 
-        // ✅ ONLY THIS: Set the user from the cart
-        item.setUser(cart.getUser());
+        // Check if item already exists in cart
+        CartItem existingItem = cartItemRepo.findByCartIdAndProductId(cart.getId(), product.getId())
+                .orElse(null);
 
-        // Calculate total price
-        BigDecimal totalPrice = product.getPrice().multiply(BigDecimal.valueOf(dto.getQuantity()));
-        item.setTotalPrice(totalPrice);
+        if (existingItem != null) {
+            // Update quantity if item exists
+            existingItem.setQuantity(existingItem.getQuantity() + requestDTO.getQuantity());
+            CartItem updated = cartItemRepo.save(existingItem);
+            return toDto(updated);
+        } else {
+            // Create new cart item
+            CartItem newItem = new CartItem();
+            newItem.setCart(cart);
+            newItem.setProduct(product);
+            newItem.setQuantity(requestDTO.getQuantity());
+            newItem.setPricePerItem(product.getPrice());
 
-        return item;
+            CartItem saved = cartItemRepo.save(newItem);
+            return toDto(saved);
+        }
     }
 
-    // ➤ Convert Entity → DTO
-    public CartItemResponseDTO toDto(CartItem item) {
+    // ✅ READ: Get cart item by ID
+    public CartItemResponseDTO getCartItemById(Long id) {
+        CartItem cartItem = cartItemRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found with ID: " + id));
+        return toDto(cartItem);
+    }
+
+    // ✅ READ: Get all cart items for a specific cart
+    public List<CartItemResponseDTO> getCartItemsByCartId(Long cartId) {
+        List<CartItem> cartItems = cartItemRepo.findByCartId(cartId);
+        return cartItems.stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ READ: Get all cart items
+    public List<CartItemResponseDTO> getAllCartItems() {
+        List<CartItem> cartItems = cartItemRepo.findAll();
+        return cartItems.stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ UPDATE: Update cart item quantity
+    public CartItemResponseDTO updateCartItemQuantity(Long id, Integer newQuantity) {
+        if (newQuantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
+        CartItem cartItem = cartItemRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found with ID: " + id));
+
+        cartItem.setQuantity(newQuantity);
+        CartItem updated = cartItemRepo.save(cartItem);
+        return toDto(updated);
+    }
+
+    // ✅ UPDATE: Update cart item (full update)
+    public CartItemResponseDTO updateCartItem(Long id, CartItemRequestDTO requestDTO) {
+        CartItem cartItem = cartItemRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found with ID: " + id));
+
+        if (requestDTO.getProductId() != null) {
+            Product product = productRepo.findById(requestDTO.getProductId())
+                    .orElseThrow(() -> new EntityNotFoundException("Product not found with ID: " + requestDTO.getProductId()));
+            cartItem.setProduct(product);
+            cartItem.setPricePerItem(product.getPrice()); // Update price when product changes
+        }
+
+        if (requestDTO.getQuantity() != null) {
+            if (requestDTO.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Quantity must be greater than 0");
+            }
+            cartItem.setQuantity(requestDTO.getQuantity());
+        }
+
+        CartItem updated = cartItemRepo.save(cartItem);
+        return toDto(updated);
+    }
+
+    // ✅ DELETE: Remove cart item by ID
+    public String deleteCartItem(Long id) {
+        CartItem cartItem = cartItemRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found with ID: " + id));
+
+        cartItemRepo.delete(cartItem);
+        return "Cart item deleted successfully!";
+    }
+
+    // ✅ DELETE: Remove cart item by cart and product
+    public String deleteCartItemByCartAndProduct(Long cartId, Long productId) {
+        CartItem cartItem = cartItemRepo.findByCartIdAndProductId(cartId, productId)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found for cart ID: " + cartId + " and product ID: " + productId));
+
+        cartItemRepo.delete(cartItem);
+        return "Cart item deleted successfully!";
+    }
+
+    // ✅ DELETE: Remove all items from cart
+    public String clearCartItems(Long cartId) {
+        List<CartItem> cartItems = cartItemRepo.findByCartId(cartId);
+        if (!cartItems.isEmpty()) {
+            cartItemRepo.deleteAll(cartItems);
+            return "All cart items cleared successfully!";
+        }
+        return "Cart is already empty!";
+    }
+
+    // ✅ COUNT: Get total items count in cart
+    public Integer getCartItemsCount(Long cartId) {
+        List<CartItem> cartItems = cartItemRepo.findByCartId(cartId);
+        return cartItems.stream()
+                .mapToInt(CartItem::getQuantity)
+                .sum();
+    }
+
+    // ✅ CALCULATE: Get subtotal for cart
+    public Double getCartSubtotal(Long cartId) {
+        List<CartItem> cartItems = cartItemRepo.findByCartId(cartId);
+        return cartItems.stream()
+                .mapToDouble(item -> item.getTotalPrice().doubleValue())
+                .sum();
+    }
+
+    // ✅ CONVERT: Entity to DTO (FIXED - Now handles imageUrls properly)
+    public CartItemResponseDTO toDto(CartItem cartItem) {
         CartItemResponseDTO dto = new CartItemResponseDTO();
-        dto.setId(item.getId());
-        dto.setProductName(item.getProduct().getName());
-        dto.setPricePerItem(item.getPricePerItem());
-        dto.setQuantity(item.getQuantity());
-        dto.setTotalPrice(item.getTotalPrice());
+        dto.setId(cartItem.getId());
+        dto.setProductId(cartItem.getProduct().getId());
+        dto.setProductName(cartItem.getProduct().getName());
+        dto.setPricePerItem(cartItem.getPricePerItem());
+        dto.setQuantity(cartItem.getQuantity());
+        dto.setTotalPrice(cartItem.getTotalPrice());
+        dto.setCartId(cartItem.getCart().getId());
+
+        // ✅ FIXED: Handle product images from List<String> imageUrls
+        List<String> imageUrls = cartItem.getProduct().getImageUrls();
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            // Get the first image as the main product image
+            dto.setProductImage(imageUrls.get(0));
+        } else {
+            // Set default image if no images available
+            dto.setProductImage("/images/default-product.png");
+        }
+
         return dto;
     }
 
-    // ➤ Save CartItem
-    public CartItemResponseDTO save(CartItemRequestDTO dto) {
-        CartItem item = toEntity(dto);
-        CartItem saved = cartItemRepo.save(item);
-        cartService.recalculateTotal(item.getCart()); // recalc total
-        return toDto(saved);
+    // ✅ CONVERT: DTO to Entity (for internal use)
+    public CartItem toEntity(CartItemRequestDTO requestDTO) {
+        Cart cart = cartRepo.findById(requestDTO.getCartId())
+                .orElseThrow(() -> new EntityNotFoundException("Cart not found"));
+
+        Product product = productRepo.findById(requestDTO.getProductId())
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+
+        CartItem cartItem = new CartItem();
+        cartItem.setCart(cart);
+        cartItem.setProduct(product);
+        cartItem.setQuantity(requestDTO.getQuantity());
+        cartItem.setPricePerItem(product.getPrice());
+
+        return cartItem;
     }
 
-    // ➤ Get CartItem by ID
-    public CartItemResponseDTO getById(Long id) {
-        CartItem item = cartItemRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("CartItem not found"));
-        return toDto(item);
+    // ✅ CHECK: If product exists in cart
+    public boolean isProductInCart(Long cartId, Long productId) {
+        return cartItemRepo.findByCartIdAndProductId(cartId, productId).isPresent();
     }
 
-    // ➤ Get all CartItems
-    public List<CartItemResponseDTO> getAll() {
-        return cartItemRepo.findAll().stream().map(this::toDto).collect(Collectors.toList());
-    }
-
-    // ➤ Delete CartItem
-    public String delete(Long id) {
-        CartItem item = cartItemRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("CartItem not found"));
-        Cart cart = item.getCart();
-        cartItemRepo.delete(item);
-        cartService.recalculateTotal(cart);
-        return "Cart item deleted successfully!";
+    // ✅ GET: CartItem by cart and product
+    public CartItemResponseDTO getCartItemByCartAndProduct(Long cartId, Long productId) {
+        CartItem cartItem = cartItemRepo.findByCartIdAndProductId(cartId, productId)
+                .orElseThrow(() -> new EntityNotFoundException("CartItem not found for cart ID: " + cartId + " and product ID: " + productId));
+        return toDto(cartItem);
     }
 }

@@ -14,5 +14,6 @@ import java.util.Optional;
 public interface OrderItemRepo extends JpaRepository<OrderItem, Long> {
     Optional<OrderItem> findByOrderAndProduct(Order order, Product product);
     List<OrderItem> findByOrder(Order order);
+    void deleteByOrderAndProduct(Order order, Product product); // Optional: for direct deletion
 
 }
