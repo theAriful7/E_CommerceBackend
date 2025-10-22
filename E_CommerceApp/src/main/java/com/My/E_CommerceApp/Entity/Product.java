@@ -38,8 +38,7 @@ public class Product extends Base{
 //    @Column(unique = true, nullable = false)
 //    private String sku;
 
-//    @Column(name = "image_url")
-//    private String[] imageUrl;
+
 
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
@@ -50,10 +49,14 @@ public class Product extends Base{
     @Column(nullable = false)
     private ProductStatus status = ProductStatus.PENDING;
 
-
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
+
+    // NEW: Optional sub-category
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sub_category_id")
+    private SubCategory subCategory; // ADD THIS
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -62,5 +65,17 @@ public class Product extends Base{
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
 
+    // NEW: Specifications for the product
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductSpecification> specifications = new ArrayList<>();
 
+    // NEW: Add this method to handle specifications easily
+    public void addSpecification(String key, String value, Integer displayOrder) {
+        ProductSpecification spec = new ProductSpecification();
+        spec.setKey(key);
+        spec.setValue(value);
+        spec.setDisplayOrder(displayOrder != null ? displayOrder : 0);
+        spec.setProduct(this); // Very important - connect specification to product
+        this.specifications.add(spec);
+    }
 }

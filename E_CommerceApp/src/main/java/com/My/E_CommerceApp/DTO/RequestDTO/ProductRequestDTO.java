@@ -14,7 +14,9 @@ public class ProductRequestDTO {
     private Integer stock;
     private List<String> imageUrls;
     private Long categoryId;
+    private Long subCategoryId;
     private Double discount;
     private String brand;
     // private Long vendorId; // optional, admin only
+    private List<ProductSpecificationDTO> specifications;
 }
