@@ -5,6 +5,7 @@ import com.My.E_CommerceApp.DTO.ResponseDTO.PaymentResponseDTO;
 import com.My.E_CommerceApp.Enum.PaymentStatus;
 import com.My.E_CommerceApp.Service.PaymentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,37 +17,60 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PaymentController {
 
+
     private final PaymentService paymentService;
 
-    // ✅ Create Payment
+    // ✅ Create Payment - HTTP 201
     @PostMapping
     public ResponseEntity<PaymentResponseDTO> createPayment(@RequestBody PaymentRequestDTO dto) {
-        return ResponseEntity.ok(paymentService.createPayment(dto));
+        PaymentResponseDTO response = paymentService.createPayment(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // ✅ Get Payment by ID
+    // ✅ Get Payment by ID - HTTP 200
     @GetMapping("/{id}")
     public ResponseEntity<PaymentResponseDTO> getPaymentById(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.getPaymentById(id));
     }
 
-    // ✅ Get All Payments
+    // ✅ Get Payment by Order ID - HTTP 200
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<PaymentResponseDTO> getPaymentByOrderId(@PathVariable Long orderId) {
+        return ResponseEntity.ok(paymentService.getPaymentByOrderId(orderId));
+    }
+
+    // ✅ Get All Payments - HTTP 200
     @GetMapping
     public ResponseEntity<List<PaymentResponseDTO>> getAllPayments() {
         return ResponseEntity.ok(paymentService.getAllPayments());
     }
 
+    // ✅ Get Payments by Status - HTTP 200
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<PaymentResponseDTO>> getPaymentsByStatus(@PathVariable PaymentStatus status) {
+        return ResponseEntity.ok(paymentService.getPaymentsByStatus(status));
+    }
+
+    // ✅ Update Payment Status - HTTP 200
     @PutMapping("/{id}/status")
     public ResponseEntity<PaymentResponseDTO> updatePaymentStatus(
             @PathVariable Long id,
-            @RequestParam PaymentStatus status) { // enum directly
+            @RequestParam PaymentStatus status) {
         return ResponseEntity.ok(paymentService.updatePaymentStatus(id, status));
     }
 
-    // ✅ Delete Payment
+    // ✅ Process Payment - HTTP 200
+    @PostMapping("/{id}/process")
+    public ResponseEntity<PaymentResponseDTO> processPayment(
+            @PathVariable Long id,
+            @RequestParam(required = false) String transactionId) {
+        return ResponseEntity.ok(paymentService.processPayment(id, transactionId));
+    }
+
+    // ✅ Delete Payment - HTTP 204
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deletePayment(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
         paymentService.deletePayment(id);
-        return ResponseEntity.ok("Payment deleted successfully");
+        return ResponseEntity.noContent().build();
     }
 }

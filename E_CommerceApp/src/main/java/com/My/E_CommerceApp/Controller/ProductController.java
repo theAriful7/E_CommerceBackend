@@ -3,14 +3,12 @@ package com.My.E_CommerceApp.Controller;
 import com.My.E_CommerceApp.DTO.RequestDTO.ProductRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.ProductResponseDTO;
 import com.My.E_CommerceApp.Enum.ProductStatus;
-import com.My.E_CommerceApp.Service.AddressService;
 import com.My.E_CommerceApp.Service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController

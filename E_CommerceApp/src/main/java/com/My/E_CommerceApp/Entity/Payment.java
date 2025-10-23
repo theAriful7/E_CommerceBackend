@@ -32,11 +32,14 @@ public class Payment extends Base{
     @Column(nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
+    @Column(name = "transaction_id")
+    private String transactionId; // For payment gateway reference
+
     private LocalDateTime paymentDate;
 
     @PrePersist
     protected void onCreate() {
-        if (paymentDate == null) {
+        if (paymentDate == null && paymentStatus == PaymentStatus.COMPLETED) {
             paymentDate = LocalDateTime.now();
         }
     }

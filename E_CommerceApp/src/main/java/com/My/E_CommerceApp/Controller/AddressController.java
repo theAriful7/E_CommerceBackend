@@ -1,9 +1,13 @@
 package com.My.E_CommerceApp.Controller;
 
 import com.My.E_CommerceApp.DTO.RequestDTO.AddressRequestDTO;
+import com.My.E_CommerceApp.DTO.RequestDTO.ReviewRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.AddressResponseDTO;
+import com.My.E_CommerceApp.DTO.ResponseDTO.ReviewResponseDTO;
 import com.My.E_CommerceApp.Service.AddressService;
+import com.My.E_CommerceApp.Service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,69 +19,57 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AddressController {
 
-    private final AddressService addressService;
+    private final ReviewService reviewService;
 
-    // ➕ CREATE NEW ADDRESS
+    // ✅ Create Review - HTTP 201
     @PostMapping
-    public ResponseEntity<AddressResponseDTO> createAddress(@RequestBody AddressRequestDTO dto) {
-        return ResponseEntity.ok(addressService.createAddress(dto));
+    public ResponseEntity<ReviewResponseDTO> createReview(@RequestBody ReviewRequestDTO dto) {
+        ReviewResponseDTO response = reviewService.createReview(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // 🔍 GET ADDRESS BY ID
-    @GetMapping("/{id}")
-    public ResponseEntity<AddressResponseDTO> getAddressById(@PathVariable Long id) {
-        return ResponseEntity.ok(addressService.getAddressById(id));
-    }
-
-    // 📋 GET ALL ADDRESSES
+    // ✅ Get All Reviews - HTTP 200
     @GetMapping
-    public ResponseEntity<List<AddressResponseDTO>> getAllAddresses() {
-        return ResponseEntity.ok(addressService.getAllAddresses());
+    public ResponseEntity<List<ReviewResponseDTO>> getAllReviews() {
+        return ResponseEntity.ok(reviewService.getAllReviews());
     }
 
-    // 👤 GET ADDRESSES BY USER ID
+    // ✅ Get Review by ID - HTTP 200
+    @GetMapping("/{id}")
+    public ResponseEntity<ReviewResponseDTO> getReviewById(@PathVariable Long id) {
+        return ResponseEntity.ok(reviewService.getReviewById(id));
+    }
+
+    // ✅ Get Reviews by Product - HTTP 200
+    @GetMapping("/product/{productId}")
+    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByProduct(@PathVariable Long productId) {
+        return ResponseEntity.ok(reviewService.getReviewsByProduct(productId));
+    }
+
+    // ✅ Get Reviews by User - HTTP 200
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<AddressResponseDTO>> getAddressesByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(addressService.getAddressesByUserId(userId));
+    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(reviewService.getReviewsByUser(userId));
     }
 
-    // ✏️ UPDATE ADDRESS
+    // ✅ Get Product Average Rating - HTTP 200
+    @GetMapping("/product/{productId}/average-rating")
+    public ResponseEntity<Double> getProductAverageRating(@PathVariable Long productId) {
+        return ResponseEntity.ok(reviewService.getProductAverageRating(productId));
+    }
+
+    // ✅ Update Review - HTTP 200
     @PutMapping("/{id}")
-    public ResponseEntity<AddressResponseDTO> updateAddress(
+    public ResponseEntity<ReviewResponseDTO> updateReview(
             @PathVariable Long id,
-            @RequestBody AddressRequestDTO dto) {
-        return ResponseEntity.ok(addressService.updateAddress(id, dto));
+            @RequestBody ReviewRequestDTO dto) {
+        return ResponseEntity.ok(reviewService.updateReview(id, dto));
     }
 
-    // ❌ DELETE ADDRESS (Simple - without user validation)
+    // ✅ Delete Review - HTTP 204
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteAddress(@PathVariable Long id) {
-        return ResponseEntity.ok(addressService.deleteAddress(id));
-    }
-
-    // 🔒 DELETE ADDRESS WITH USER VALIDATION
-    @DeleteMapping("/{id}/user/{userId}")
-    public ResponseEntity<String> deleteAddressWithValidation(
-            @PathVariable Long id,
-            @PathVariable Long userId) {
-        return ResponseEntity.ok(addressService.deleteAddress(id, userId));
-    }
-
-    // 🔢 GET ADDRESS COUNT BY USER
-    @GetMapping("/user/{userId}/count")
-    public ResponseEntity<Integer> getAddressCount(@PathVariable Long userId) {
-        return ResponseEntity.ok(addressService.getAddressCountByUser(userId));
-    }
-
-    // ✅ CHECK IF USER HAS ADDRESSES
-    @GetMapping("/user/{userId}/exists")
-    public ResponseEntity<Boolean> userHasAddresses(@PathVariable Long userId) {
-        return ResponseEntity.ok(addressService.userHasAddresses(userId));
-    }
-
-    // 🏠 GET DEFAULT ADDRESS
-    @GetMapping("/user/{userId}/default")
-    public ResponseEntity<AddressResponseDTO> getDefaultAddress(@PathVariable Long userId) {
-        return ResponseEntity.ok(addressService.getDefaultAddress(userId));
+    public ResponseEntity<Void> deleteReview(@PathVariable Long id) {
+        reviewService.deleteReview(id);
+        return ResponseEntity.noContent().build();
     }
 }

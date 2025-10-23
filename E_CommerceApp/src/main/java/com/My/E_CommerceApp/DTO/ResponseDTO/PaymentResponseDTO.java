@@ -16,5 +16,4 @@ public class PaymentResponseDTO {
     private PaymentStatus paymentStatus;  // Enum type
     private LocalDateTime paymentDate;
 
-
 }
