@@ -3,6 +3,7 @@ package com.My.E_CommerceApp.Service;
 import com.My.E_CommerceApp.DTO.RequestDTO.OrderItemRequestDTO;
 import com.My.E_CommerceApp.DTO.RequestDTO.OrderItemUpdateRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.OrderItemResponseDTO;
+import com.My.E_CommerceApp.Entity.FileData;
 import com.My.E_CommerceApp.Entity.Order;
 import com.My.E_CommerceApp.Entity.OrderItem;
 import com.My.E_CommerceApp.Entity.Product;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -173,11 +175,29 @@ public class OrderItemService {
         dto.setPrice(item.getPrice());
         dto.setTotalPrice(item.getTotalPrice());
 
-        if (!item.getProduct().getImageUrls().isEmpty()) {
-            dto.setProductImage(item.getProduct().getImageUrls().get(0));
-        }
+        // UPDATED: Get product image from FileData
+        dto.setProductImage(getProductImageUrl(item.getProduct()));
 
         return dto;
+    }
+
+    // ✅ HELPER METHOD TO EXTRACT PRODUCT IMAGE URL
+    private String getProductImageUrl(Product product) {
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            return null;
+        }
+
+        // Priority: Primary image > Sorted image > First image
+        return product.getImages().stream()
+                .filter(image -> Boolean.TRUE.equals(image.getIsPrimary()))
+                .findFirst()
+                .map(FileData::getFilePath)
+                .orElseGet(() ->
+                        product.getImages().stream()
+                                .min(Comparator.comparing(FileData::getSortOrder))
+                                .map(FileData::getFilePath)
+                                .orElse(product.getImages().get(0).getFilePath())
+                );
     }
 
     // ✅ GET ORDER ITEM RESPONSE

@@ -6,7 +6,7 @@ public enum ProductStatus {
     INACTIVE,   // Not available but not deleted
     OUT_OF_STOCK, // Temporarily unavailable
     DISCONTINUED, // Permanently unavailable
-    REJECTED;   // Admin rejected the product
+    REJECTED, APPROVED;   // Admin rejected the product
 
     // ✅ ADD THIS METHOD to check if product is available for purchase
     public boolean isActive() {

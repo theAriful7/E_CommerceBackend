@@ -20,10 +20,25 @@ public interface UserRepo extends JpaRepository<User, Long> {
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByPhone(String phone);
 
+    // Find users by role
+    List<User> findByRole(Role role);
+
+    // Find active users by role
+    List<User> findByRoleAndIsActive(Role role, Boolean isActive);
+
     List<User> findAllByRole(Role role); // small lists
     Page<User> findAllByRole(Role role, Pageable pageable); // pageable vendor/customer list
 
     // For search by name or email (for admin)
     Page<User> findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email, Pageable pageable);
 
+    // 🔹 NEW METHODS ADDED FOR CUSTOMER/VENDOR MANAGEMENT
+    // Count users by role
+    Long countByRole(Role role);
+
+    // Count active users by role
+    Long countByRoleAndIsActive(Role role, Boolean isActive);
+
+    // Search users by name or email (without pagination for admin panel)
+    List<User> findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email);
 }

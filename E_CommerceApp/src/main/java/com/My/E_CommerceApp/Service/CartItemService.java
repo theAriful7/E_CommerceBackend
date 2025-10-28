@@ -2,10 +2,7 @@ package com.My.E_CommerceApp.Service;
 
 import com.My.E_CommerceApp.DTO.RequestDTO.CartItemRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.CartItemResponseDTO;
-import com.My.E_CommerceApp.Entity.Cart;
-import com.My.E_CommerceApp.Entity.CartItem;
-import com.My.E_CommerceApp.Entity.Product;
-import com.My.E_CommerceApp.Entity.User;
+import com.My.E_CommerceApp.Entity.*;
 import com.My.E_CommerceApp.Repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +11,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -160,7 +158,7 @@ public class CartItemService {
                 .sum();
     }
 
-    // ✅ CONVERT: Entity to DTO (FIXED - Now handles imageUrls properly)
+    // ✅ CONVERT: Entity to DTO (UPDATED - Uses helper method)
     public CartItemResponseDTO toDto(CartItem cartItem) {
         CartItemResponseDTO dto = new CartItemResponseDTO();
         dto.setId(cartItem.getId());
@@ -171,17 +169,29 @@ public class CartItemService {
         dto.setTotalPrice(cartItem.getTotalPrice());
         dto.setCartId(cartItem.getCart().getId());
 
-        // ✅ FIXED: Handle product images from List<String> imageUrls
-        List<String> imageUrls = cartItem.getProduct().getImageUrls();
-        if (imageUrls != null && !imageUrls.isEmpty()) {
-            // Get the first image as the main product image
-            dto.setProductImage(imageUrls.get(0));
-        } else {
-            // Set default image if no images available
-            dto.setProductImage("/images/default-product.png");
-        }
+        // ✅ UPDATED: Use consistent image selection logic
+        dto.setProductImage(getProductImageUrl(cartItem.getProduct()));
 
         return dto;
+    }
+
+    // ✅ REUSABLE HELPER METHOD (Same as in OrderService)
+    private String getProductImageUrl(Product product) {
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            return "/images/default-product.png"; // Default image
+        }
+
+        // Priority: Primary image > Sorted image > First image
+        return product.getImages().stream()
+                .filter(image -> Boolean.TRUE.equals(image.getIsPrimary()))
+                .findFirst()
+                .map(FileData::getFilePath)
+                .orElseGet(() ->
+                        product.getImages().stream()
+                                .min(Comparator.comparing(FileData::getSortOrder))
+                                .map(FileData::getFilePath)
+                                .orElse(product.getImages().get(0).getFilePath())
+                );
     }
 
     // ✅ CONVERT: DTO to Entity (for internal use)

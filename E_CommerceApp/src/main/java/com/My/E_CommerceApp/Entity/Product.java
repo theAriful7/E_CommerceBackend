@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "products")
 @EqualsAndHashCode(callSuper = true)
+@Builder
 public class Product extends Base{
 
     @Column(nullable = false)
@@ -32,18 +33,40 @@ public class Product extends Base{
 
     private String brand;
 
+
+
+    @Column(name = "sales_count")
+    @Builder.Default
+    private Integer salesCount = 0;
+
+    @Column(name = "view_count")
+    @Builder.Default
+    private Integer viewCount = 0;
+
+    @Column(name = "rating")
+    @Builder.Default
+    private Double rating = 0.0;
+
+    @Column(name = "is_featured")
+    @Builder.Default
+    private Boolean isFeatured = false;
+
+    @Column(name = "admin_boost")
+    @Builder.Default
+    private Double adminBoost = 0.0;
+
 //    @Column(unique = true, nullable = false)
 //    private String sku;
 
 
-    @ElementCollection
-    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
-    @Column(name = "image_url")
-    private List<String> imageUrls = new ArrayList<>();
+    // One-to-Many with FileData for images (replacing old List<String> imageUrls)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<FileData> images = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductStatus status = ProductStatus.PENDING;
+    private ProductStatus status = ProductStatus.ACTIVE;
 
     @ManyToOne
     @JoinColumn(name = "category_id")

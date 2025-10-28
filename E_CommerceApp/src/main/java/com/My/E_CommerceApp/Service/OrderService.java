@@ -17,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -278,11 +280,34 @@ public class OrderService {
         dto.setPrice(item.getPrice());
         dto.setTotalPrice(item.getTotalPrice());
 
-        // Add product image if available
-        if (!item.getProduct().getImageUrls().isEmpty()) {
-            dto.setProductImage(item.getProduct().getImageUrls().get(0));
-        }
+        // Add product image using helper method
+        dto.setProductImage(getProductImageUrl(item.getProduct()));
 
         return dto;
+    }
+
+    // ✅ HELPER METHOD TO GET PRODUCT IMAGE URL
+    private String getProductImageUrl(Product product) {
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            return null;
+        }
+
+        // Try to get primary image first
+        Optional<FileData> primaryImage = product.getImages().stream()
+                .filter(image -> Boolean.TRUE.equals(image.getIsPrimary()))
+                .findFirst();
+
+        if (primaryImage.isPresent()) {
+            return primaryImage.get().getFilePath();
+        }
+
+        // If no primary, get first image by sort order
+        return product.getImages().stream()
+                .min(Comparator.comparing(FileData::getSortOrder))
+                .map(FileData::getFilePath)
+                .orElseGet(() -> {
+                    // Fallback: get any image
+                    return product.getImages().get(0).getFilePath();
+                });
     }
 }

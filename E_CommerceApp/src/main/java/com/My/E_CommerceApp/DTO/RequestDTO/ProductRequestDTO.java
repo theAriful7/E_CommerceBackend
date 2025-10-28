@@ -12,7 +12,7 @@ public class ProductRequestDTO {
     private String description;
     private BigDecimal price;
     private Integer stock;
-    private List<String> imageUrls;
+    private List<FileDataDTO> images;
     private Long categoryId;
     private Long subCategoryId;
     private Double discount;

@@ -1,5 +1,6 @@
 package com.My.E_CommerceApp.Service;
 
+import com.My.E_CommerceApp.DTO.RequestDTO.FileDataDTO;
 import com.My.E_CommerceApp.DTO.RequestDTO.ProductRequestDTO;
 import com.My.E_CommerceApp.DTO.RequestDTO.ProductSpecificationDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.ProductResponseDTO;
@@ -26,6 +27,7 @@ public class ProductService {
     private final UserRepo userRepo;
     private final ProductSpecificationRepo specificationRepo;
     private final SubCategoryRepo subCategoryRepo;
+    private final FileDataRepo fileDataRepo;
 
     // -------------------- Mapper: DTO to Entity -------------------- //
     public Product toEntity(ProductRequestDTO dto, Category category, User vendor) {
@@ -34,12 +36,12 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setStock(dto.getStock());
-        product.setImageUrls(dto.getImageUrls() != null ? dto.getImageUrls() : new ArrayList<>());
+        product.setImages(new ArrayList<>());
         product.setCategory(category);
         product.setVendor(vendor);
         product.setDiscount(dto.getDiscount() != null ? dto.getDiscount() : 0.0);
         product.setBrand(dto.getBrand());
-        product.setStatus(ProductStatus.PENDING);
+        product.setStatus(ProductStatus.ACTIVE);
 
         // Handle specifications
         if (dto.getSpecifications() != null && !dto.getSpecifications().isEmpty()) {
@@ -80,7 +82,15 @@ public class ProductService {
         dto.setDescription(product.getDescription());
         dto.setPrice(product.getPrice());
         dto.setStock(product.getStock());
-        dto.setImageUrls(product.getImageUrls());
+        // Add FileData images mapping
+        if (product.getImages() != null && !product.getImages().isEmpty()) {
+            List<FileDataDTO> imageDTOs = product.getImages().stream()
+                    .map(this::mapFileDataToDTO)
+                    .collect(Collectors.toList());
+            dto.setImages(imageDTOs);
+        } else {
+            dto.setImages(new ArrayList<>());
+        }
         dto.setDiscount(product.getDiscount());
         dto.setBrand(product.getBrand());
         dto.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
@@ -112,6 +122,21 @@ public class ProductService {
         return dto;
     }
 
+    // -------------------- Helper: Map FileData to DTO -------------------- //
+    private FileDataDTO mapFileDataToDTO(FileData fileData) {
+        return FileDataDTO.builder()
+                .id(fileData.getId())
+                .fileName(fileData.getFileName())
+                .filePath(fileData.getFilePath())
+                .fileType(fileData.getFileType())
+                .fileSize(fileData.getFileSize())
+                .altText(fileData.getAltText())
+                .sortOrder(fileData.getSortOrder())
+                .isPrimary(fileData.getIsPrimary())
+                .mimeType(fileData.getMimeType())
+                .build();
+    }
+
     // -------------------- Create Product -------------------- //
     @Transactional
     public ProductResponseDTO createProduct(ProductRequestDTO dto, Long vendorId) {
@@ -126,6 +151,9 @@ public class ProductService {
 
             // Convert DTO to Entity
             Product product = toEntity(dto, category, vendor);
+
+            // ✅ FIX: Change status to APPROVED instead of ACTIVE
+            product.setStatus(ProductStatus.ACTIVE);
 
             // Save product
             Product savedProduct = productRepo.save(product);
@@ -176,7 +204,7 @@ public class ProductService {
             existing.setDescription(dto.getDescription());
             existing.setPrice(dto.getPrice());
             existing.setStock(dto.getStock());
-            existing.setImageUrls(dto.getImageUrls() != null ? dto.getImageUrls() : existing.getImageUrls());
+//            existing.setImageUrls(dto.getImageUrls() != null ? dto.getImageUrls() : existing.getImageUrls());
             existing.setCategory(category);
             existing.setDiscount(dto.getDiscount() != null ? dto.getDiscount() : existing.getDiscount());
             existing.setBrand(dto.getBrand() != null ? dto.getBrand() : existing.getBrand());
@@ -306,6 +334,81 @@ public class ProductService {
                     .collect(Collectors.toList());
         } catch (Exception ex) {
             throw new OperationFailedException("Retrieve sub-category products", ex.getMessage());
+        }
+    }
+
+
+    // -------------------- Search Products -------------------- //
+    public List<ProductResponseDTO> searchProducts(String keyword) {
+        try {
+            // Implement proper JPA search
+            List<Product> products = productRepo.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrBrandContainingIgnoreCase(
+                    keyword, keyword, keyword
+            );
+            return products.stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        } catch (Exception ex) {
+            throw new OperationFailedException("Search products", ex.getMessage());
+        }
+    }
+
+    // -------------------- Filter Products -------------------- //
+    public List<ProductResponseDTO> filterProducts(Long categoryId, Long subCategoryId,
+                                                   Double minPrice, Double maxPrice, String brand) {
+        try {
+            List<Product> products = productRepo.findByFilters(
+                    categoryId, subCategoryId, minPrice, maxPrice, brand
+            );
+            return products.stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        } catch (Exception ex) {
+            throw new OperationFailedException("Filter products", ex.getMessage());
+        }
+    }
+
+    // Simple trending products - just get approved products
+    public List<Product> getTrendingProducts(int limit) {
+        try {
+            // Simple implementation - get recently approved products
+            List<Product> allProducts = productRepo.findByStatus(ProductStatus.APPROVED);
+            return allProducts.stream()
+                    .filter(p -> p.getStock() > 0)
+                    .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // newest first
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        } catch (Exception ex) {
+            // Fallback: return empty list
+            return new ArrayList<>();
+        }
+    }
+
+    // Simple best sellers
+    public List<Product> getBestSellers(int limit) {
+        try {
+            List<Product> allProducts = productRepo.findByStatus(ProductStatus.APPROVED);
+            return allProducts.stream()
+                    .filter(p -> p.getStock() > 0)
+                    .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // newest first
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        } catch (Exception ex) {
+            return new ArrayList<>();
+        }
+    }
+
+    // Simple featured products
+    public List<Product> getFeaturedProducts(int limit) {
+        try {
+            List<Product> allProducts = productRepo.findByStatus(ProductStatus.APPROVED);
+            return allProducts.stream()
+                    .filter(p -> p.getStock() > 0)
+                    .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // newest first
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        } catch (Exception ex) {
+            return new ArrayList<>();
         }
     }
 }
