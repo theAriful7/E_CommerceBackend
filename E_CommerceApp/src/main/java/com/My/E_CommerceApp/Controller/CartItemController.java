@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/cart_items")
-@CrossOrigin(origins = "http://localhost:4200")
+//@CrossOrigin(origins = "http://localhost:4200")
 @RequiredArgsConstructor
 public class CartItemController {
 
@@ -97,11 +97,15 @@ public class CartItemController {
         return ResponseEntity.ok(response);
     }
 
-    // ✅ DELETE: Remove cart item by ID
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteCartItem(@PathVariable Long id) {
-        String message = cartItemService.deleteCartItem(id);
-        return ResponseEntity.ok(message);
+        if (!cartItemService.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Cart item with ID " + id + " not found!");
+        }
+
+        cartItemService.deleteCartItem(id);
+        return ResponseEntity.ok("✅ Cart item deleted successfully!");
     }
 
     // ✅ DELETE: Remove cart item by cart and product

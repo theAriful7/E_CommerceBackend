@@ -24,8 +24,16 @@ public class CartItemService {
     private final CartRepo cartRepo;
     private final ProductRepo productRepo;
 
-    // ✅ CREATE: Add item to cart
+
+    public boolean existsById(Long id) {
+        return cartItemRepo.existsById(id);
+    }
+
+
     public CartItemResponseDTO addItemToCart(CartItemRequestDTO requestDTO) {
+        System.out.println("🛒 === BACKEND DEBUG START ===");
+        System.out.println("📥 Received request: " + requestDTO);
+
         Cart cart = cartRepo.findById(requestDTO.getCartId())
                 .orElseThrow(() -> new EntityNotFoundException("Cart not found with ID: " + requestDTO.getCartId()));
 
@@ -36,11 +44,13 @@ public class CartItemService {
         CartItem existingItem = cartItemRepo.findByCartIdAndProductId(cart.getId(), product.getId())
                 .orElse(null);
 
+        CartItem savedItem;
+
         if (existingItem != null) {
-            // Update quantity if item exists
+            // Update existing item
             existingItem.setQuantity(existingItem.getQuantity() + requestDTO.getQuantity());
-            CartItem updated = cartItemRepo.save(existingItem);
-            return toDto(updated);
+            savedItem = cartItemRepo.save(existingItem);
+            System.out.println("🔄 Updated existing item - ID: " + savedItem.getId());
         } else {
             // Create new cart item
             CartItem newItem = new CartItem();
@@ -49,9 +59,17 @@ public class CartItemService {
             newItem.setQuantity(requestDTO.getQuantity());
             newItem.setPricePerItem(product.getPrice());
 
-            CartItem saved = cartItemRepo.save(newItem);
-            return toDto(saved);
+            savedItem = cartItemRepo.save(newItem);
+            System.out.println("✅ Created new item - ID: " + savedItem.getId());
         }
+
+        // Convert to DTO
+        CartItemResponseDTO responseDTO = toDto(savedItem);
+        System.out.println("📤 Sending response: " + responseDTO);
+        System.out.println("📤 Response ID: " + responseDTO.getId());
+        System.out.println("🛒 === BACKEND DEBUG END ===\n");
+
+        return responseDTO;
     }
 
     // ✅ READ: Get cart item by ID
@@ -114,14 +132,15 @@ public class CartItemService {
         return toDto(updated);
     }
 
-    // ✅ DELETE: Remove cart item by ID
     public String deleteCartItem(Long id) {
-        CartItem cartItem = cartItemRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("CartItem not found with ID: " + id));
+        if (!cartItemRepo.existsById(id)) {
+            return "⚠️ Cart item with ID " + id + " not found!";
+        }
 
-        cartItemRepo.delete(cartItem);
-        return "Cart item deleted successfully!";
+        cartItemRepo.deleteById(id);
+        return "✅ Cart item deleted successfully!";
     }
+
 
     // ✅ DELETE: Remove cart item by cart and product
     public String deleteCartItemByCartAndProduct(Long cartId, Long productId) {
@@ -158,8 +177,11 @@ public class CartItemService {
                 .sum();
     }
 
-    // ✅ CONVERT: Entity to DTO (UPDATED - Uses helper method)
     public CartItemResponseDTO toDto(CartItem cartItem) {
+        System.out.println("🔧 Converting CartItem to DTO:");
+        System.out.println("   CartItem ID: " + cartItem.getId());
+        System.out.println("   CartItem exists: " + (cartItem != null));
+
         CartItemResponseDTO dto = new CartItemResponseDTO();
         dto.setId(cartItem.getId());
         dto.setProductId(cartItem.getProduct().getId());
@@ -168,9 +190,10 @@ public class CartItemService {
         dto.setQuantity(cartItem.getQuantity());
         dto.setTotalPrice(cartItem.getTotalPrice());
         dto.setCartId(cartItem.getCart().getId());
-
-        // ✅ UPDATED: Use consistent image selection logic
         dto.setProductImage(getProductImageUrl(cartItem.getProduct()));
+
+        System.out.println("   DTO ID: " + dto.getId());
+        System.out.println("   🔧 Conversion complete");
 
         return dto;
     }
