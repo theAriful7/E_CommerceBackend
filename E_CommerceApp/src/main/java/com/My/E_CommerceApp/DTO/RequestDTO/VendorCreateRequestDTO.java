@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class VendorCreateRequestDTO {
+    // User fields
     @NotBlank(message = "Full name is required")
     private String fullName;
 
@@ -18,10 +19,17 @@ public class VendorCreateRequestDTO {
     @NotBlank(message = "Password is required")
     private String password;
 
+    private String profileImage;
+    private String gender;
+    private String bio;
+
+    // Vendor fields
     @NotBlank(message = "Shop name is required")
     private String shopName;
 
     private String shopDescription;
     private String shopLogo;
-    private String profileImage;
+    private String businessEmail;
+    private String businessPhone;
+    private String taxNumber;
 }

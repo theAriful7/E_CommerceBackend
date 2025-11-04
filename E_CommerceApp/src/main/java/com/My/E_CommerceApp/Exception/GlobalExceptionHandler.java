@@ -35,6 +35,11 @@ public class GlobalExceptionHandler {
         return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, req.getRequestURI());
     }
 
+    @ExceptionHandler(BusinessValidationException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessValidation(BusinessValidationException ex, HttpServletRequest req) {
+        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, req.getRequestURI());
+    }
+
     @ExceptionHandler(UnauthorizedAccessException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedAccessException ex, HttpServletRequest req) {
         return buildResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED, req.getRequestURI());

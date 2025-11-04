@@ -21,7 +21,6 @@ import java.util.List;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class User extends Base{
-
     @Column(name = "full_name", nullable = false, length = 120)
     private String fullName;
 
@@ -42,27 +41,21 @@ public class User extends Base{
     private String gender;
     private String bio;
 
-    // Vendor info
-    private String shopName;
-    private String shopDescription;
-    private String shopLogo;
-
-    //Vendor rating
-    private Double averageRating = 0.0;
-
-
     // A user can have multiple addresses
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Address> addresses = new ArrayList<>();
 
-    @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Product> products = new ArrayList<>();
+    // A user can be associated with a vendor account (if they are a vendor)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Vendor vendor;
 
+    // Orders placed by this user (as customer)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Order> orders = new ArrayList<>();
 
+    // Reviews written by this user (as customer)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
 

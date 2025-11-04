@@ -1,15 +1,21 @@
 package com.My.E_CommerceApp.Service;
 
-import com.My.E_CommerceApp.DTO.RequestDTO.LoginRequestDTO;;
+
 import com.My.E_CommerceApp.DTO.RequestDTO.UserRequestDTO;
+import com.My.E_CommerceApp.DTO.RequestDTO.UserUpdateRequestDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.AddressResponseDTO;
 import com.My.E_CommerceApp.DTO.ResponseDTO.UserResponseDTO;
 import com.My.E_CommerceApp.Entity.User;
 import com.My.E_CommerceApp.Enum.Role;
+import com.My.E_CommerceApp.Exception.CustomException.AlreadyExistsException;
+import com.My.E_CommerceApp.Exception.CustomException.BusinessValidationException;
+import com.My.E_CommerceApp.Exception.CustomException.ResourceNotFoundException;
 import com.My.E_CommerceApp.Repository.UserRepo;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
@@ -19,126 +25,283 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserService {
-
     private final UserRepo userRepo;
 
-    // -------------------- 🔹 Mapper Methods -------------------- //
+    // 🔹 CREATE OPERATIONS
+    public UserResponseDTO createUser(UserRequestDTO userRequestDTO) {
+        System.out.println("Creating new user with email: " + userRequestDTO.getEmail());
 
-    private UserResponseDTO toDto(User user) {
-        UserResponseDTO dto = new UserResponseDTO();
-        dto.setId(user.getId());
-        dto.setFullName(user.getFullName());
-        dto.setEmail(user.getEmail());
-        dto.setPhone(user.getPhone());
-        dto.setRole(user.getRole());
-        dto.setIsActive(user.getIsActive());
-        dto.setProfileImage(user.getProfileImage());
-        dto.setAccountStatus(user.getAccountStatus());
-//        dto.setGender(user.getGender());
-//        dto.setBio(user.getBio());
-//        dto.setShopName(user.getShopName());
-//        dto.setShopDescription(user.getShopDescription());
-//        dto.setShopLogo(user.getShopLogo());
-//        dto.setAverageRating(user.getAverageRating());
-        dto.setIsActive(user.getIsActive());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setUpdatedAt(user.getUpdatedAt());
-        // 🟢 Entity List → DTO List mapping
-        List<AddressResponseDTO> addressDTOs = user.getAddresses().stream().map(address -> {
-            AddressResponseDTO addressDTO = new AddressResponseDTO();
-            addressDTO.setId(address.getId());
-            addressDTO.setStreet(address.getStreet());
-            addressDTO.setCity(address.getCity());
-            addressDTO.setCountry(address.getCountry());
-            addressDTO.setPostalCode(address.getPostalCode());
-            return addressDTO;
-        }).toList();
-        return dto;
+        validateUserCreation(userRequestDTO);
+
+        User user = mapToUserEntity(userRequestDTO);
+        user.setPassword(userRequestDTO.getPassword());
+        user.setRole(Role.CUSTOMER);
+
+        User savedUser = userRepo.save(user);
+        System.out.println("User created successfully with ID: " + savedUser.getId());
+
+        return mapToUserResponseDTO(savedUser);
     }
 
-    private User toEntity(UserRequestDTO dto) {
-        User user = new User();
-        user.setFullName(dto.getFullName());
-        user.setEmail(dto.getEmail());
-        user.setPhone(dto.getPhone());
-        user.setPassword(dto.getPassword());
-        user.setRole(Role.CUSTOMER); // ✅ Default role is CUSTOMER
-        user.setIsActive(true);
-        return user;
+    // 🔹 READ OPERATIONS
+    @Transactional(readOnly = true)
+    public UserResponseDTO getUserById(Long userId) {
+        System.out.println("Fetching user by ID: " + userId);
+        User user = findUserById(userId);
+        return mapToUserResponseDTO(user);
     }
 
-    // -------------------- 🔹 Register -------------------- //
-
-    public UserResponseDTO register(UserRequestDTO dto) {
-        boolean emailExists = userRepo.findAll().stream()
-                .anyMatch(u -> u.getEmail().equalsIgnoreCase(dto.getEmail()));
-        if (emailExists) throw new RuntimeException("😅 ভাই, এই ইমেইলটা তো আগেই রেজিস্টার আছে! অন্যটা দাও না 😉");
-
-        User saved = userRepo.save(toEntity(dto));
-        return toDto(saved);
+    @Transactional(readOnly = true)
+    public UserResponseDTO getUserByEmail(String email) {
+        System.out.println("Fetching user by email: " + email);
+        User user = userRepo.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        return mapToUserResponseDTO(user);
     }
 
-    // -------------------- 🔹 Login -------------------- //
-
-    public Optional<UserResponseDTO> login(LoginRequestDTO dto) {
-        return userRepo.findAll().stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(dto.getEmail()))
-                .filter(u -> u.getPassword().equals(dto.getPassword())) // ⚠️ plain text check
-                .map(this::toDto)
-                .findFirst();
-    }
-
-    // -------------------- 🔹 CRUD -------------------- //
-
+    @Transactional(readOnly = true)
     public List<UserResponseDTO> getAllUsers() {
-        return userRepo.findAll()
-                .stream()
-                .map(this::toDto)
+        System.out.println("Fetching all users");
+        return userRepo.findAll().stream()
+                .map(this::mapToUserResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public UserResponseDTO getUserById(Long id) {
-        User user = userRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        return toDto(user);
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> getAllUsers(Pageable pageable) {
+        System.out.println("Fetching users with pagination");
+        return userRepo.findAll(pageable)
+                .map(this::mapToUserResponseDTO);
     }
 
-    public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
-        User user = userRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-        if (dto.getFullName() != null) user.setFullName(dto.getFullName());
-        if (dto.getEmail() != null) user.setEmail(dto.getEmail());
-        if (dto.getPhone() != null) user.setPhone(dto.getPhone());
-        if (dto.getPassword() != null) user.setPassword(dto.getPassword());
-
-        User updated = userRepo.save(user);
-        return toDto(updated);
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getUsersByRole(Role role) {
+        System.out.println("Fetching users by role: " + role);
+        return userRepo.findByRole(role).stream()
+                .map(this::mapToUserResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    public String deactivateUser(Long id) {
-        User user = userRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> getUsersByRole(Role role, Pageable pageable) {
+        System.out.println("Fetching users by role " + role + " with pagination");
+        return userRepo.findByRole(role, pageable)
+                .map(this::mapToUserResponseDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getActiveUsersByRole(Role role) {
+        System.out.println("Fetching active users by role: " + role);
+        return userRepo.findByRoleAndIsActive(role, true).stream()
+                .map(this::mapToUserResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // 🔹 UPDATE OPERATIONS
+    public UserResponseDTO updateUser(Long userId, UserUpdateRequestDTO updateRequestDTO) {
+        System.out.println("Updating user with ID: " + userId);
+
+        User user = findUserById(userId);
+        validateUserUpdate(user, updateRequestDTO);
+
+        updateUserEntity(user, updateRequestDTO);
+        User updatedUser = userRepo.save(user);
+
+        System.out.println("User updated successfully with ID: " + userId);
+        return mapToUserResponseDTO(updatedUser);
+    }
+
+    public UserResponseDTO updateUserRole(Long userId, Role newRole) {
+        System.out.println("Updating role for user ID: " + userId + " to " + newRole);
+
+        User user = findUserById(userId);
+
+        // Business validation: Check if user can change to this role
+        if (user.getRole() == Role.VENDOR_USER && newRole != Role.VENDOR_USER) {
+            throw new BusinessValidationException("Cannot change role from VENDOR_USER. Please contact admin.");
+        }
+
+        user.setRole(newRole);
+        User updatedUser = userRepo.save(user);
+
+        System.out.println("User role updated successfully from " + user.getRole() + " to " + newRole);
+        return mapToUserResponseDTO(updatedUser);
+    }
+
+    public void deactivateUser(Long userId) {
+        System.out.println("Deactivating user with ID: " + userId);
+        User user = findUserById(userId);
+
+        if (user.getRole() == Role.VENDOR_USER) {
+            throw new BusinessValidationException("Cannot deactivate vendor user. Please suspend vendor account first.");
+        }
+
         user.setIsActive(false);
         userRepo.save(user);
-        return "User deactivated successfully";
+        System.out.println("User deactivated successfully");
     }
 
-    // -------------------- 🔹 Role Management -------------------- //
-
-    public UserResponseDTO promoteToVendor(Long id) {
-        User user = userRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        user.setRole(Role.VENDOR);
-        User saved = userRepo.save(user);
-        return toDto(saved);
+    public void activateUser(Long userId) {
+        System.out.println("Activating user with ID: " + userId);
+        User user = findUserById(userId);
+        user.setIsActive(true);
+        userRepo.save(user);
+        System.out.println("User activated successfully");
     }
 
-    public UserResponseDTO promoteToAdmin(Long id) {
-        User user = userRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        user.setRole(Role.ADMIN);
-        User saved = userRepo.save(user);
-        return toDto(saved);
+    // 🔹 DELETE OPERATIONS
+    public void deleteUser(Long userId) {
+        System.out.println("Deleting user with ID: " + userId);
+        User user = findUserById(userId);
+
+        // Business validation: Check if user has vendor account
+        if (user.getVendor() != null) {
+            throw new BusinessValidationException("Cannot delete user with active vendor account. Delete vendor account first.");
+        }
+
+        userRepo.delete(user);
+        System.out.println("User deleted successfully");
+    }
+
+    // 🔹 SEARCH OPERATIONS
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> searchUsers(String keyword) {
+        System.out.println("Searching users with keyword: " + keyword);
+        return userRepo.searchUsers(keyword).stream()
+                .map(this::mapToUserResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> searchUsers(String keyword, Pageable pageable) {
+        System.out.println("Searching users with keyword " + keyword + " and pagination");
+        return userRepo.searchUsers(keyword, pageable)
+                .map(this::mapToUserResponseDTO);
+    }
+
+    // 🔹 VALIDATION METHODS
+    private void validateUserCreation(UserRequestDTO userRequestDTO) {
+        if (userRepo.existsByEmailIgnoreCase(userRequestDTO.getEmail())) {
+            throw new AlreadyExistsException("Email already exists: " + userRequestDTO.getEmail());
+        }
+
+        if (userRequestDTO.getPhone() != null && userRepo.existsByPhone(userRequestDTO.getPhone())) {
+            throw new AlreadyExistsException("Phone number already exists: " + userRequestDTO.getPhone());
+        }
+    }
+
+    private void validateUserUpdate(User user, UserUpdateRequestDTO updateRequestDTO) {
+        if (updateRequestDTO.getEmail() != null &&
+                !user.getEmail().equalsIgnoreCase(updateRequestDTO.getEmail()) &&
+                userRepo.existsByEmailIgnoreCaseAndIdNot(updateRequestDTO.getEmail(), user.getId())) {
+            throw new AlreadyExistsException("Email already exists: " + updateRequestDTO.getEmail());
+        }
+
+        if (updateRequestDTO.getPhone() != null &&
+                !user.getPhone().equals(updateRequestDTO.getPhone()) &&
+                userRepo.existsByPhoneAndIdNot(updateRequestDTO.getPhone(), user.getId())) {
+            throw new AlreadyExistsException("Phone number already exists: " + updateRequestDTO.getPhone());
+        }
+    }
+
+    // 🔹 UTILITY METHODS
+    public User findUserById(Long userId) {
+        return userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+    }
+
+    private void updateUserEntity(User user, UserUpdateRequestDTO updateRequestDTO) {
+        if (updateRequestDTO.getFullName() != null) {
+            user.setFullName(updateRequestDTO.getFullName());
+        }
+        if (updateRequestDTO.getEmail() != null) {
+            user.setEmail(updateRequestDTO.getEmail());
+        }
+        if (updateRequestDTO.getPhone() != null) {
+            user.setPhone(updateRequestDTO.getPhone());
+        }
+        if (updateRequestDTO.getProfileImage() != null) {
+            user.setProfileImage(updateRequestDTO.getProfileImage());
+        }
+        if (updateRequestDTO.getGender() != null) {
+            user.setGender(updateRequestDTO.getGender());
+        }
+        if (updateRequestDTO.getBio() != null) {
+            user.setBio(updateRequestDTO.getBio());
+        }
+    }
+
+    // 🔹 MAPPING METHODS (Manual DTO Mapping)
+    private User mapToUserEntity(UserRequestDTO userRequestDTO) {
+        User user = new User();
+        user.setFullName(userRequestDTO.getFullName());
+        user.setEmail(userRequestDTO.getEmail());
+        user.setPhone(userRequestDTO.getPhone());
+        user.setProfileImage(userRequestDTO.getProfileImage());
+        user.setGender(userRequestDTO.getGender());
+        user.setBio(userRequestDTO.getBio());
+        return user;
+    }
+
+    private UserResponseDTO mapToUserResponseDTO(User user) {
+        UserResponseDTO responseDTO = new UserResponseDTO();
+        responseDTO.setId(user.getId());
+        responseDTO.setFullName(user.getFullName());
+        responseDTO.setEmail(user.getEmail());
+        responseDTO.setPhone(user.getPhone());
+        responseDTO.setRole(user.getRole());
+        responseDTO.setProfileImage(user.getProfileImage());
+        responseDTO.setGender(user.getGender());
+        responseDTO.setBio(user.getBio());
+        responseDTO.setIsActive(user.getIsActive());
+        responseDTO.setAccountStatus(user.getAccountStatus());
+        responseDTO.setCreatedAt(user.getCreatedAt());
+        responseDTO.setUpdatedAt(user.getUpdatedAt());
+
+        // Map addresses if needed
+        if (user.getAddresses() != null) {
+            List<AddressResponseDTO> addressDTOs = user.getAddresses().stream()
+                    .map(address -> {
+                        AddressResponseDTO addressDTO = new AddressResponseDTO();
+                        addressDTO.setId(address.getId());
+                        addressDTO.setStreet(address.getStreet());
+                        addressDTO.setCity(address.getCity());
+                        addressDTO.setState(address.getState());
+                        addressDTO.setCountry(address.getCountry());
+                        return addressDTO;
+                    })
+                    .collect(Collectors.toList());
+            responseDTO.setAddresses(addressDTOs);
+        }
+
+        return responseDTO;
+    }
+
+    // 🔹 BUSINESS LOGIC METHODS
+    @Transactional(readOnly = true)
+    public boolean isUserActive(Long userId) {
+        return userRepo.findById(userId)
+                .map(User::getIsActive)
+                .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public Long getActiveUsersCount() {
+        return userRepo.countActiveUsers();
+    }
+
+    @Transactional(readOnly = true)
+    public Long getUsersCountByRole(Role role) {
+        return userRepo.countByRole(role);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean userExists(Long userId) {
+        return userRepo.existsById(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean emailExists(String email) {
+        return userRepo.existsByEmailIgnoreCase(email);
     }
 }

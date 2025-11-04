@@ -9,30 +9,20 @@ import java.util.List;
 
 @Data
 public class UserResponseDTO {
-
     private Long id;
     private String fullName;
     private String email;
     private String phone;
     private Role role;
+    private String profileImage;
+    private String gender;
+    private String bio;
     private Boolean isActive;
     private AccountStatus accountStatus;
-
-    private String profileImage;
-//    private String bio;
-//    private String gender;
-
-    // Vendor info (optional)
-//    private String shopName;
-//    private String shopDescription;
-//    private String shopLogo;
-//    private Double averageRating;
-
-    // Audit info
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private String createdBy;
-//    private String updatedBy;
-
     private List<AddressResponseDTO> addresses;
+
+    // Vendor info (if user is a vendor)
+    private VendorBasicResponseDTO vendor;
 }

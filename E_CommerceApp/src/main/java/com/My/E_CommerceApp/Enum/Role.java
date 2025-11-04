@@ -4,5 +4,5 @@ public enum Role {
     USER,
     ADMIN,
     CUSTOMER,
-    VENDOR
+    VENDOR_USER
 }

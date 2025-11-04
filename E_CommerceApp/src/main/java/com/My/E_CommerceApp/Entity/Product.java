@@ -78,8 +78,8 @@ public class Product extends Base{
     private SubCategory subCategory; // ADD THIS
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User vendor;
+    @JoinColumn(name = "vendor_id", nullable = false) // Changed from user_id to vendor_id
+    private Vendor vendor;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();

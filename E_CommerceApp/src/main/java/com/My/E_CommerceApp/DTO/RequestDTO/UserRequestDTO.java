@@ -20,27 +20,16 @@ public class UserRequestDTO {
     @Email(message = "Invalid email format")
     private String email;
 
-    @Size(min = 2, max = 20, message = "Phone number must be between 10–15 characters")
+    @Size(min = 10, max = 15, message = "Phone number must be between 10-15 characters")
     private String phone;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 4, message = "Password must be at least 4 characters")
+    @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
     private String profileImage;
-
-    private AccountStatus accountStatus;
-
-    // Optional during registration (user may leave blank)
-//    private List<AddressRequestDTO> addresses;
-
-    private Boolean isActive;
-
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
-
-    private String createdBy;
+    private String gender;
+    private String bio;
 
 
 }

@@ -2,6 +2,7 @@ package com.My.E_CommerceApp.Repository;
 
 import com.My.E_CommerceApp.Entity.Product;
 import com.My.E_CommerceApp.Enum.ProductStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -13,37 +14,47 @@ import java.util.List;
 
 @Repository
 public interface ProductRepo extends JpaRepository<Product, Long> {
-    // Custom method to find products by vendor
+
     List<Product> findByVendorId(Long vendorId);
+    Page<Product> findByVendorId(Long vendorId, Pageable pageable);
+    List<Product> findByVendorIdAndStatus(Long vendorId, ProductStatus status);
+    Long countByVendorId(Long vendorId);
 
-    // Custom method to find products by category
+    // Category methods
     List<Product> findByCategoryId(Long categoryId);
+    Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 
-    // Custom method to find products by status
+    // Status methods
     List<Product> findByStatus(ProductStatus status);
+    Page<Product> findByStatus(ProductStatus status, Pageable pageable);
 
+    // Filter methods
     @Query("SELECT p FROM Product p WHERE " +
             "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
             "(:subCategoryId IS NULL OR p.subCategory.id = :subCategoryId) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-            "(:brand IS NULL OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :brand, '%')))")
+            "(:brand IS NULL OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :brand, '%'))) AND " +
+            "(:status IS NULL OR p.status = :status)")
     List<Product> findByFilters(@Param("categoryId") Long categoryId,
                                 @Param("subCategoryId") Long subCategoryId,
                                 @Param("minPrice") Double minPrice,
                                 @Param("maxPrice") Double maxPrice,
-                                @Param("brand") String brand);
+                                @Param("brand") String brand,
+                                @Param("status") ProductStatus status);
 
+    // Search methods
     List<Product> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrBrandContainingIgnoreCase(
             String name, String description, String brand);
 
+    Page<Product> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrBrandContainingIgnoreCase(
+            String name, String description, String brand, Pageable pageable);
 
-
-    // Trending products with vendor distribution
+    // ✅ UPDATED: Trending products with VENDOR table
     @Query(value = """
         WITH ranked_products AS (
             SELECT p.*, 
-                   u.shop_name as vendor_name,
+                   v.shop_name as vendor_name,
                    ROW_NUMBER() OVER (PARTITION BY p.vendor_id ORDER BY 
                        (COALESCE(p.rating, 0) * 0.3 + 
                         COALESCE(p.sales_count, 0) * 0.4 + 
@@ -57,11 +68,10 @@ public interface ProductRepo extends JpaRepository<Product, Long> {
                     COALESCE(p.admin_boost, 0) * 0.1 +
                     CASE WHEN p.created_at > CURRENT_DATE - INTERVAL 30 DAY THEN 0.1 ELSE 0 END) as performance_score
             FROM products p
-            JOIN users u ON p.vendor_id = u.id
-            WHERE p.status = 'APPROVED' 
+            JOIN vendors v ON p.vendor_id = v.id
+            WHERE p.status = 'ACTIVE' 
             AND p.stock > 0
-            AND u.account_status = 'ACTIVE'
-            AND u.role = 'VENDOR'
+            AND v.vendor_status = 'ACTIVE'
         )
         SELECT * FROM ranked_products 
         WHERE vendor_rank <= 2
@@ -70,24 +80,22 @@ public interface ProductRepo extends JpaRepository<Product, Long> {
         """, nativeQuery = true)
     List<Product> findTrendingProducts(@Param("limit") int limit);
 
-    // Best sellers (pure sales based)
+    // ✅ UPDATED: Best sellers with VENDOR
     @Query("""
         SELECT p FROM Product p 
-        WHERE p.status = 'APPROVED' 
+        WHERE p.status = 'ACTIVE' 
         AND p.stock > 0 
-        AND p.vendor.accountStatus = 'ACTIVE'
-        AND p.vendor.role = 'VENDOR'
+        AND p.vendor.vendorStatus = 'ACTIVE'
         ORDER BY p.salesCount DESC, p.rating DESC
         """)
     List<Product> findBestSellingProducts(Pageable pageable);
 
-    // Featured products (admin curated + high performing)
+    // ✅ UPDATED: Featured products with VENDOR
     @Query("""
         SELECT p FROM Product p 
-        WHERE p.status = 'APPROVED' 
+        WHERE p.status = 'ACTIVE' 
         AND p.stock > 0 
-        AND p.vendor.accountStatus = 'ACTIVE'
-        AND p.vendor.role = 'VENDOR'
+        AND p.vendor.vendorStatus = 'ACTIVE'
         AND (p.isFeatured = true OR p.rating >= 4.0 OR p.salesCount >= 50)
         ORDER BY p.isFeatured DESC, p.adminBoost DESC, p.salesCount DESC
         """)
@@ -102,18 +110,23 @@ public interface ProductRepo extends JpaRepository<Product, Long> {
     @Query("UPDATE Product p SET p.salesCount = COALESCE(p.salesCount, 0) + :quantity WHERE p.id = :productId")
     void incrementSalesCount(@Param("productId") Long productId, @Param("quantity") int quantity);
 
-    // Get vendor distribution statistics
+    // ✅ UPDATED: Vendor distribution with VENDOR table
     @Query("""
-        SELECT u.id, COALESCE(u.shopName, u.fullName), 
+        SELECT v.id, v.shopName, 
                COUNT(p.id) as productCount,
                SUM(CASE WHEN p.isFeatured = true THEN 1 ELSE 0 END) as featuredCount
-        FROM User u 
-        LEFT JOIN u.products p 
-        WHERE u.role = 'VENDOR' 
-        AND u.accountStatus = 'ACTIVE'
-        AND (p IS NULL OR p.status = 'APPROVED')
-        GROUP BY u.id, u.shopName, u.fullName
+        FROM Vendor v 
+        LEFT JOIN v.products p 
+        WHERE v.vendorStatus = 'ACTIVE'
+        AND (p IS NULL OR p.status = 'ACTIVE')
+        GROUP BY v.id, v.shopName
         ORDER BY productCount DESC
         """)
     List<Object[]> getVendorDistributionStats();
+
+    // ✅ NEW: Additional useful methods
+    List<Product> findByCategoryIdAndStatus(Long categoryId, ProductStatus status);
+    Page<Product> findByCategoryIdAndStatus(Long categoryId, ProductStatus status, Pageable pageable);
+    List<Product> findByIsFeaturedTrueAndStatus(ProductStatus status);
+    Long countByStatus(ProductStatus status);
 }

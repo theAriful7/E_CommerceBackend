@@ -7,7 +7,12 @@ import com.My.E_CommerceApp.Entity.Product;
 import com.My.E_CommerceApp.Enum.ProductStatus;
 import com.My.E_CommerceApp.Service.FileDataService;
 import com.My.E_CommerceApp.Service.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,145 +26,112 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/products")
-//@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200")
 @RequiredArgsConstructor
 public class ProductController {
 
     private final ProductService productService;
-    private final FileDataService fileDataService;
 
-    @PostMapping("/vendor/{vendorId}")
+    // 🔹 VENDOR PRODUCT MANAGEMENT ENDPOINTS
+    @PostMapping("/vendors/{vendorId}")
     public ResponseEntity<ProductResponseDTO> createProduct(
             @PathVariable Long vendorId,
-            @RequestBody ProductRequestDTO dto) {
-        ProductResponseDTO response = productService.createProduct(dto, vendorId);
-        return ResponseEntity.ok(response); // ✅ Fix: HTTP 200
+            @Valid @RequestBody ProductRequestDTO productRequestDTO) {
+        ProductResponseDTO product = productService.createProduct(productRequestDTO, vendorId);
+        return new ResponseEntity<>(product, HttpStatus.CREATED);
     }
 
-    // ✅ UPDATED: Upload Product Images
-//    @PostMapping("/{productId}/images")
-//    public ResponseEntity<?> uploadProductImages(
-//            @PathVariable Long productId,
-//            @RequestParam("files") List<MultipartFile> files,
-//            @RequestParam(value = "altTexts", required = false) List<String> altTexts,
-//            @RequestParam(value = "sortOrders", required = false) List<Integer> sortOrders,
-//            @RequestParam(value = "isPrimary", required = false) List<Boolean> isPrimary) {
-//
-//        try {
-//            List<FileData> uploadedImages = fileDataService.uploadProductImages(
-//                    productId, files, altTexts, sortOrders, isPrimary
-//            );
-//            return ResponseEntity.status(HttpStatus.CREATED).body(uploadedImages);
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body("Error uploading images: " + e.getMessage());
-//        }
-//    }
-
-    @PostMapping("/{productId}/images")
-    public ResponseEntity<List<FileData>> uploadProductImages(
-            @PathVariable Long productId,
-            @RequestParam("files") List<MultipartFile> files,
-            @RequestParam(value = "altTexts", required = false) List<String> altTexts,
-            @RequestParam(value = "sortOrders", required = false) List<Integer> sortOrders,
-            @RequestParam(value = "isPrimary", required = false) List<Boolean> isPrimary) throws IOException {
-
-        List<FileData> uploadedImages = fileDataService.uploadProductImages(
-                productId, files, altTexts, sortOrders, isPrimary
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(uploadedImages);
+    @GetMapping("/vendors/{vendorId}")
+    public ResponseEntity<List<ProductResponseDTO>> getVendorProducts(@PathVariable Long vendorId) {
+        List<ProductResponseDTO> products = productService.getProductsByVendor(vendorId);
+        return ResponseEntity.ok(products);
     }
 
-    // ✅ UPDATED: Get Product Images
-    @GetMapping("/{productId}/images")
-    public ResponseEntity<?> getProductImages(@PathVariable Long productId) {
-        try {
-            List<FileData> images = fileDataService.getProductImages(productId);
-            return ResponseEntity.ok(images);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving images: " + e.getMessage());
-        }
-    }
-
-    // ✅ Get All Products - HTTP 200
-    @GetMapping
-    public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
-        List<ProductResponseDTO> response = productService.getAllProducts();
-        return ResponseEntity.ok(response);
-    }
-
-    // ✅ Get Product By ID - HTTP 200
-    @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
-        ProductResponseDTO response = productService.getProductById(id);
-        return ResponseEntity.ok(response);
-    }
-
-    // ✅ Get Products By Vendor - HTTP 200
-    @GetMapping("/vendor/{vendorId}")
-    public ResponseEntity<List<ProductResponseDTO>> getProductsByVendor(@PathVariable Long vendorId) {
-        List<ProductResponseDTO> response = productService.getProductsByVendor(vendorId);
-        return ResponseEntity.ok(response);
-    }
-
-    // ✅ Get Products By Category - HTTP 200
-    @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<ProductResponseDTO>> getProductsByCategory(@PathVariable Long categoryId) {
-        List<ProductResponseDTO> response = productService.getProductsByCategory(categoryId);
-        return ResponseEntity.ok(response);
-    }
-
-    // ✅ Get Products By Status - HTTP 200
-    @GetMapping("/status/{status}")
-    public ResponseEntity<List<ProductResponseDTO>> getProductsByStatus(@PathVariable ProductStatus status) {
-        List<ProductResponseDTO> response = productService.getProductsByStatus(status);
-        return ResponseEntity.ok(response);
-    }
-
-    // ✅ Get Products By SubCategory - HTTP 200
-    @GetMapping("/sub-category/{subCategoryId}")
-    public ResponseEntity<List<ProductResponseDTO>> getProductsBySubCategory(@PathVariable Long subCategoryId) {
-        List<ProductResponseDTO> response = productService.getProductsBySubCategory(subCategoryId);
-        return ResponseEntity.ok(response);
-    }
-
-    // ✅ Update Product - HTTP 200
-    @PutMapping("/{id}/vendor/{vendorId}")
-    public ResponseEntity<ProductResponseDTO> updateProduct(
-            @PathVariable Long id,
+    @GetMapping("/vendors/{vendorId}/paginated")
+    public ResponseEntity<Page<ProductResponseDTO>> getVendorProductsPaginated(
             @PathVariable Long vendorId,
-            @RequestBody ProductRequestDTO dto) {
-        ProductResponseDTO response = productService.updateProduct(id, dto, vendorId);
-        return ResponseEntity.ok(response);
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductResponseDTO> products = productService.getProductsByVendor(vendorId, pageable);
+        return ResponseEntity.ok(products);
     }
 
-    // ✅ Delete Product - HTTP 204
-    @DeleteMapping("/{id}/vendor/{vendorId}")
+    @GetMapping("/vendors/{vendorId}/active")
+    public ResponseEntity<List<ProductResponseDTO>> getActiveVendorProducts(@PathVariable Long vendorId) {
+        List<ProductResponseDTO> products = productService.getActiveProductsByVendor(vendorId);
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/vendors/{vendorId}/count")
+    public ResponseEntity<Long> getVendorProductCount(@PathVariable Long vendorId) {
+        Long count = productService.getProductCountByVendor(vendorId);
+        return ResponseEntity.ok(count);
+    }
+
+    @PutMapping("/{productId}/vendors/{vendorId}")
+    public ResponseEntity<ProductResponseDTO> updateProduct(
+            @PathVariable Long productId,
+            @PathVariable Long vendorId,
+            @Valid @RequestBody ProductRequestDTO productRequestDTO) {
+        ProductResponseDTO product = productService.updateProduct(productId, productRequestDTO, vendorId);
+        return ResponseEntity.ok(product);
+    }
+
+    @DeleteMapping("/{productId}/vendors/{vendorId}")
     public ResponseEntity<Void> deleteProduct(
-            @PathVariable Long id,
+            @PathVariable Long productId,
             @PathVariable Long vendorId) {
-        productService.deleteProduct(id, vendorId);
+        productService.deleteProduct(productId, vendorId);
         return ResponseEntity.noContent().build();
     }
 
-    // ✅ Change Product Status (Admin) - HTTP 200
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<ProductResponseDTO> changeProductStatus(
-            @PathVariable Long id,
-            @RequestParam ProductStatus status) {
-        ProductResponseDTO response = productService.changeProductStatus(id, status);
-        return ResponseEntity.ok(response);
+    // 🔹 PUBLIC PRODUCT ENDPOINTS
+    @GetMapping("/{productId}")
+    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long productId) {
+        ProductResponseDTO product = productService.getProductById(productId);
+        return ResponseEntity.ok(product);
     }
 
-    // ✅ Search Products
+    @GetMapping
+    public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
+        List<ProductResponseDTO> products = productService.getAllProducts();
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/paginated")
+    public ResponseEntity<Page<ProductResponseDTO>> getAllProductsPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection) {
+        Sort sort = sortDirection.equalsIgnoreCase("desc") ?
+                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<ProductResponseDTO> products = productService.getAllProducts(pageable);
+        return ResponseEntity.ok(products);
+    }
+
+    // 🔹 CATEGORY & STATUS ENDPOINTS
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<List<ProductResponseDTO>> getProductsByCategory(@PathVariable Long categoryId) {
+        List<ProductResponseDTO> products = productService.getProductsByCategory(categoryId);
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<ProductResponseDTO>> getProductsByStatus(@PathVariable ProductStatus status) {
+        List<ProductResponseDTO> products = productService.getProductsByStatus(status);
+        return ResponseEntity.ok(products);
+    }
+
+    // 🔹 SEARCH & FILTER ENDPOINTS
     @GetMapping("/search")
     public ResponseEntity<List<ProductResponseDTO>> searchProducts(@RequestParam String keyword) {
-        List<ProductResponseDTO> response = productService.searchProducts(keyword);
-        return ResponseEntity.ok(response);
+        List<ProductResponseDTO> products = productService.searchProducts(keyword);
+        return ResponseEntity.ok(products);
     }
 
-    // ✅ Filter Products
     @GetMapping("/filter")
     public ResponseEntity<List<ProductResponseDTO>> filterProducts(
             @RequestParam(required = false) Long categoryId,
@@ -167,107 +139,40 @@ public class ProductController {
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) String brand) {
-
-        List<ProductResponseDTO> response = productService.filterProducts(
-                categoryId, subCategoryId, minPrice, maxPrice, brand
-        );
-        return ResponseEntity.ok(response);
+        List<ProductResponseDTO> products = productService.filterProducts(
+                categoryId, subCategoryId, minPrice, maxPrice, brand);
+        return ResponseEntity.ok(products);
     }
 
-    // ✅ UPDATED: Delete Product Image
-    @DeleteMapping("/{productId}/images/{imageId}")
-    public ResponseEntity<?> deleteProductImage(
-            @PathVariable Long productId,
-            @PathVariable Long imageId) {
-        try {
-            fileDataService.removeImageFromProduct(productId, imageId);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error deleting image: " + e.getMessage());
-        }
-    }
-
-    // ✅ UPDATED: Set Primary Image
-    @PatchMapping("/{productId}/images/{imageId}/primary")
-    public ResponseEntity<?> setPrimaryImage(
-            @PathVariable Long productId,
-            @PathVariable Long imageId) {
-        try {
-            FileData result = fileDataService.setPrimaryImage(productId, imageId);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error setting primary image: " + e.getMessage());
-        }
-    }
-
-    @GetMapping("/home/trending")
+    // 🔹 FEATURED PRODUCTS ENDPOINTS
+    @GetMapping("/trending")
     public ResponseEntity<List<ProductResponseDTO>> getTrendingProducts(
-            @RequestParam(defaultValue = "8") int limit) {
-        try {
-            List<Product> products = productService.getTrendingProducts(limit);
-            List<ProductResponseDTO> response = products.stream()
-                    .map(productService::toDto)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+            @RequestParam(defaultValue = "10") int limit) {
+        List<ProductResponseDTO> products = productService.getTrendingProducts(limit);
+        return ResponseEntity.ok(products);
     }
 
-    @GetMapping("/home/bestsellers")
-    public ResponseEntity<List<ProductResponseDTO>> getBestSellers(
-            @RequestParam(defaultValue = "8") int limit) {
-        try {
-            List<Product> products = productService.getBestSellers(limit);
-            List<ProductResponseDTO> response = products.stream()
-                    .map(productService::toDto)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    @GetMapping("/best-sellers")
+    public ResponseEntity<List<ProductResponseDTO>> getBestSellingProducts(
+            @RequestParam(defaultValue = "10") int limit) {
+        List<ProductResponseDTO> products = productService.getBestSellingProducts(limit);
+        return ResponseEntity.ok(products);
     }
 
-    @GetMapping("/home/featured")
+    @GetMapping("/featured")
     public ResponseEntity<List<ProductResponseDTO>> getFeaturedProducts(
-            @RequestParam(defaultValue = "8") int limit) {
-        try {
-            List<Product> products = productService.getFeaturedProducts(limit);
-            List<ProductResponseDTO> response = products.stream()
-                    .map(productService::toDto)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+            @RequestParam(defaultValue = "10") int limit) {
+        List<ProductResponseDTO> products = productService.getFeaturedProducts(limit);
+        return ResponseEntity.ok(products);
     }
 
-    @GetMapping("/home/all")
-    public ResponseEntity<Map<String, List<ProductResponseDTO>>> getHomePageProducts(
-            @RequestParam(defaultValue = "8") int trendingLimit,
-            @RequestParam(defaultValue = "8") int bestsellersLimit,
-            @RequestParam(defaultValue = "8") int featuredLimit) {
-        try {
-            Map<String, List<ProductResponseDTO>> result = new HashMap<>();
-
-            result.put("trending", productService.getTrendingProducts(trendingLimit).stream()
-                    .map(productService::toDto)
-                    .collect(Collectors.toList()));
-
-            result.put("bestsellers", productService.getBestSellers(bestsellersLimit).stream()
-                    .map(productService::toDto)
-                    .collect(Collectors.toList()));
-
-            result.put("featured", productService.getFeaturedProducts(featuredLimit).stream()
-                    .map(productService::toDto)
-                    .collect(Collectors.toList()));
-
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    // 🔹 ADMIN ENDPOINTS
+    @PatchMapping("/{productId}/status")
+    public ResponseEntity<ProductResponseDTO> changeProductStatus(
+            @PathVariable Long productId,
+            @RequestParam ProductStatus newStatus) {
+        ProductResponseDTO product = productService.changeProductStatus(productId, newStatus);
+        return ResponseEntity.ok(product);
     }
 
 }

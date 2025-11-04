@@ -5,4 +5,8 @@ public class ResourceNotFoundException extends RuntimeException{
         super("😕 Oops! " + resourceName + " not found with " + fieldName + " : " + fieldValue +
                 ". Are you sure it even exists?");
     }
+
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
 }

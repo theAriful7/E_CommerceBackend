@@ -14,12 +14,6 @@ public class UserUpdateRequestDTO {
 
     private String phone;
     private String profileImage;
+    private String gender;
     private String bio;
-
-    // Vendor (seller) fields — optional
-    private String shopName;
-    private String shopDescription;
-    private String shopLogo;
-
-    private List<AddressRequestDTO> addresses;
 }
